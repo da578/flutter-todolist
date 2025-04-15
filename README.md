@@ -36,16 +36,6 @@ A simple yet powerful to-do list app built with Flutter, designed to help users 
 8. **Custom App Icons:**
    - Custom launcher icons created with **Flutter Launcher Icons**.
 
-## 📸 **Screenshots**
-
-Here are some screenshots of the ToDoList app:
-
-| Home Screen | Task Detail | Settings |
-|-------------|-------------|----------|
-| ![Home Screen](https://via.placeholder.com/300x600?text=Home+Screen) | ![Task Detail](https://via.placeholder.com/300x600?text=Task+Detail) | ![Settings](https://via.placeholder.com/300x600?text=Settings) |
-
-*(Replace the placeholders above with actual screenshots of your app.)*
-
 ## 🚀 **Installation**
 
 ### Prerequisites
