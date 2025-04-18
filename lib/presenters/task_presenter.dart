@@ -8,7 +8,7 @@ import 'package:todolist/services/notification_service.dart';
 import 'package:todolist/services/task_export_service.dart';
 import 'package:todolist/services/task_import_service.dart';
 
-/// Presenter for task operations, acting as a bridge between repository and view.
+/// Presenter for task operations, acting as a bridge between the repository and view.
 ///
 /// This class handles business logic, error handling, and state management
 /// through the provider. It ensures seamless interaction between the data layer
@@ -18,6 +18,16 @@ class TaskPresenter implements TaskPresenterContract {
   final TaskProvider _provider;
   final TaskViewContract _view;
 
+  /// Services for exporting and importing tasks.
+  final TaskExportService _exportService = TaskExportService();
+  final TaskImportService _importService = TaskImportService();
+
+  /// Constructor to inject dependencies.
+  ///
+  /// Parameters:
+  /// - [repository]: The repository responsible for CRUD operations on tasks.
+  /// - [provider]: The provider managing the app's state.
+  /// - [view]: The view interface for displaying messages or errors.
   TaskPresenter({
     required TaskRepositoryContract repository,
     required TaskProvider provider,
@@ -25,9 +35,6 @@ class TaskPresenter implements TaskPresenterContract {
   }) : _repository = repository,
        _provider = provider,
        _view = view;
-
-  final _exportService = TaskExportService();
-  final _importService = TaskImportService();
 
   /// Creates a single task and assigns the next available order number.
   ///
@@ -41,6 +48,7 @@ class TaskPresenter implements TaskPresenterContract {
   @override
   Future<void> createSingleTask(Task task) async {
     try {
+      // Determine the next order number for the new task.
       final lastTask = await _repository.readLastTask();
       final newTask = Task(
         name: task.name,
@@ -50,12 +58,15 @@ class TaskPresenter implements TaskPresenterContract {
         deadline: task.deadline,
       );
 
+      // Save the task to the repository.
       await _repository.createSingleTask(newTask);
 
+      // Update the provider with the newly created task.
       _provider
         ..setCreatedIds({newTask.id})
         ..setTasks(await _repository.readTasks());
 
+      // Schedule notifications for the task if applicable.
       if (newTask.reminder != null) {
         await NotificationService.scheduleReminder(
           'reminder_${newTask.id}',
@@ -64,7 +75,6 @@ class TaskPresenter implements TaskPresenterContract {
           'Your task is due soon!',
         );
       }
-
       if (newTask.deadline != null) {
         await NotificationService.scheduleDeadline(
           'deadline_${newTask.id}',
@@ -74,7 +84,7 @@ class TaskPresenter implements TaskPresenterContract {
         );
       }
     } catch (e) {
-      _view.showError(e.toString());
+      _view.showError('Failed to create task: $e');
     }
   }
 
@@ -93,15 +103,17 @@ class TaskPresenter implements TaskPresenterContract {
   Future<void> createMultipleTasks(List<Task> tasks) async {
     try {
       if (tasks.isEmpty) {
-        throw Exception('No tasks provided for creation.');
+        throw ArgumentError('No tasks provided for creation.');
       }
 
+      // Save all tasks to the repository.
       await _repository.createMultipleTasks(tasks);
 
       final createdIds = <int>{};
       for (final task in tasks) {
         createdIds.add(task.id);
 
+        // Schedule notifications for each task if applicable.
         if (task.reminder != null) {
           try {
             await NotificationService.scheduleReminder(
@@ -116,7 +128,6 @@ class TaskPresenter implements TaskPresenterContract {
             );
           }
         }
-
         if (task.deadline != null) {
           try {
             await NotificationService.scheduleDeadline(
@@ -133,11 +144,12 @@ class TaskPresenter implements TaskPresenterContract {
         }
       }
 
+      // Update the provider with the newly created tasks.
       _provider
         ..setCreatedIds(createdIds)
         ..setTasks(await _repository.readTasks());
     } catch (e) {
-      _view.showError(e.toString());
+      _view.showError('Failed to create multiple tasks: $e');
     }
   }
 
@@ -154,7 +166,7 @@ class TaskPresenter implements TaskPresenterContract {
         ..setTasks(await _repository.readTasks())
         ..setIsLoading(false);
     } catch (e) {
-      _view.showError(e.toString());
+      _view.showError('Failed to fetch tasks: $e');
     }
   }
 
@@ -190,10 +202,12 @@ class TaskPresenter implements TaskPresenterContract {
     try {
       await _repository.updateTask(task);
 
+      // Update the provider with the updated task.
       _provider
         ..setUpdatedIds({task.id})
         ..setTasks(await _repository.readTasks());
 
+      // Reschedule notifications for the task if applicable.
       if (task.reminder != null) {
         await NotificationService.scheduleReminder(
           'reminder_${task.id}',
@@ -202,7 +216,6 @@ class TaskPresenter implements TaskPresenterContract {
           'Your task is due soon!',
         );
       }
-
       if (task.deadline != null) {
         await NotificationService.scheduleDeadline(
           'deadline_${task.id}',
@@ -212,7 +225,7 @@ class TaskPresenter implements TaskPresenterContract {
         );
       }
     } catch (e) {
-      _view.showError(e.toString());
+      _view.showError('Failed to update task: $e');
     }
   }
 
@@ -230,7 +243,7 @@ class TaskPresenter implements TaskPresenterContract {
       await _repository.toggleTaskStatus(id);
       _provider.setTasks(await _repository.readTasks());
     } catch (e) {
-      _view.showError(e.toString());
+      _view.showError('Failed to toggle task status: $e');
     }
   }
 
@@ -249,7 +262,22 @@ class TaskPresenter implements TaskPresenterContract {
       await _repository.reorderTasks(oldIndex, newIndex);
       _provider.setTasks(await _repository.readTasks());
     } catch (e) {
-      _view.showError(e.toString());
+      _view.showError('Failed to reorder tasks: $e');
+    }
+  }
+
+  /// Sorts tasks based on the specified option.
+  ///
+  /// Parameters:
+  /// - [option]: The sorting criterion (e.g., 'ascending', 'descending').
+  ///
+  /// Throws an error if the sorting option is invalid.
+  @override
+  Future<void> sortTasks(String option) async {
+    try {
+      _provider.setFilteredTasks(await _repository.sortTasks(option));
+    } catch (e) {
+      _view.showError('Failed to sort tasks: $e');
     }
   }
 
@@ -265,11 +293,13 @@ class TaskPresenter implements TaskPresenterContract {
   Future<void> deleteTask(int id) async {
     try {
       await _repository.deleteTask(id);
+
+      // Update the provider with the deleted task.
       _provider
         ..setDeletedIds({id})
         ..setTasks(await _repository.readTasks());
     } catch (e) {
-      _view.showError(e.toString());
+      _view.showError('Failed to delete task: $e');
     }
   }
 
@@ -296,10 +326,10 @@ class TaskPresenter implements TaskPresenterContract {
           await _exportService.toCsv(tasks);
           break;
         default:
-          throw Exception('Unsupported format');
+          throw ArgumentError('Unsupported format: $format');
       }
     } catch (e) {
-      _view.showError(e.toString());
+      _view.showError('Failed to export tasks: $e');
     }
   }
 
@@ -315,7 +345,10 @@ class TaskPresenter implements TaskPresenterContract {
   @override
   Future<void> importData(String format) async {
     try {
-      if (format.isEmpty) throw Exception('Please select a format first!');
+      if (format.isEmpty) {
+        throw ArgumentError('Please select a format first!');
+      }
+
       final filePath = await _importService.pickFile(format);
       if (filePath == null) return;
 
@@ -331,13 +364,14 @@ class TaskPresenter implements TaskPresenterContract {
           tasks = await _importService.fromCsv(filePath);
           break;
         default:
-          throw Exception('Unsupported format');
+          throw ArgumentError('Unsupported format: $format');
       }
 
+      // Create the imported tasks in the repository.
       await createMultipleTasks(tasks);
       await readTasks();
     } catch (e) {
-      _view.showError(e.toString());
+      _view.showError('Failed to import tasks: $e');
     }
   }
 }
