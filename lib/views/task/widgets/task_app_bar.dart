@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:todolist/contracts/task_presenter_contract.dart';
 import 'package:todolist/shared/components/my_app_bar.dart';
-import 'package:todolist/shared/components/my_bottom_sheet.dart';
-import 'package:todolist/shared/components/my_text.dart';
 import 'package:todolist/shared/values/task_values.dart';
-import 'package:todolist/shared/values/theme_values.dart';
-import 'package:todolist/views/task/widgets/task_create.dart';
-import 'package:todolist/views/task/widgets/task_export.dart';
-import 'package:todolist/views/task/widgets/task_import.dart';
+import 'package:todolist/views/task/widgets/task_menu.dart';
 import 'package:todolist/views/task/widgets/task_search_bar.dart';
+import 'package:todolist/views/task/widgets/task_sort.dart';
 
 /// TaskAppBar is the custom app bar for the task screen.
-/// It includes a search bar, a title, and additional actions like create, export, and import tasks.
+///
+/// This widget includes a search bar, a title, and additional actions like create,
+/// export, and import tasks. It dynamically adjusts its content based on the current
+/// state (e.g., search mode or animation state).
 class TaskAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// The animation controller used for UI transitions.
   final AnimationController _animationController;
@@ -21,7 +20,9 @@ class TaskAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// Constructor for [TaskAppBar].
   ///
-  /// Requires an [AnimationController] for animations and a [TaskPresenterContract] for task-related operations.
+  /// Parameters:
+  /// - [animationController]: The controller for animations.
+  /// - [presenter]: The task presenter for handling business logic.
   const TaskAppBar({
     super.key,
     required AnimationController animationController,
@@ -34,70 +35,27 @@ class TaskAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Access the current state of the task values.
+    final taskValues = TaskValues(context).watch;
+    final isSearching = taskValues.isSearching;
+    final isSearchBarAnimating = taskValues.isSearchBarAnimating;
+
     return MyAppBar(
-      title: TaskValues(context).watch.isSearching ? '' : 'To Do List App',
+      title: isSearching ? '' : 'To Do List App',
       actions: [
+        // Search bar is always visible.
         TaskSearchBar(),
+        // Sort button is visible only when not in search mode or animating.
         Visibility(
-          visible:
-              !TaskValues(context).watch.isSearching &&
-              !TaskValues(context).watch.isSearchBarAnimating,
-          child: PopupMenuButton(
-            borderRadius: BorderRadius.circular(20),
-            color: ThemeValues(context).colorScheme.surfaceContainerHigh,
-            icon: Icon(
-              Icons.more_vert_rounded,
-              color: ThemeValues(context).colorScheme.onSurface,
-            ),
-            elevation: 1,
-            itemBuilder:
-                (_) => [
-                  PopupMenuItem(
-                    onTap:
-                        () => MyBottomSheet.show(
-                          context: context,
-                          animationController: _animationController,
-                          builder: (_) => TaskCreate(presenter: _presenter),
-                        ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.add),
-                        const SizedBox(width: 10),
-                        MyText('Create'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    onTap: () async {
-                      if (!context.mounted) return;
-                      MyBottomSheet.show(
-                        context: context,
-                        builder: (_) => TaskExport(presenter: _presenter),
-                      );
-                    },
-                    child: Row(
-                      children: [
-                        Icon(Icons.upload),
-                        const SizedBox(width: 10),
-                        MyText('Export'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    onTap:
-                        () async => MyBottomSheet.show(
-                          context: context,
-                          builder: (_) => TaskImport(presenter: _presenter),
-                        ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.download),
-                        const SizedBox(width: 10),
-                        MyText('Import'),
-                      ],
-                    ),
-                  ),
-                ],
+          visible: !isSearching && !isSearchBarAnimating,
+          child: TaskSort(presenter: _presenter),
+        ),
+        // Menu button is visible only when not in search mode or animating.
+        Visibility(
+          visible: !isSearching && !isSearchBarAnimating,
+          child: TaskMenu(
+            animationController: _animationController,
+            presenter: _presenter,
           ),
         ),
       ],
