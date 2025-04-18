@@ -4,19 +4,21 @@ import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 import 'package:provider/provider.dart';
 import 'package:todolist/contracts/task_presenter_contract.dart';
 import 'package:todolist/contracts/task_view_contract.dart';
+import 'package:todolist/models/task.dart';
 import 'package:todolist/presenters/task_presenter.dart';
 import 'package:todolist/providers/task_provider.dart';
 import 'package:todolist/repositories/task_repository.dart';
 import 'package:todolist/shared/values/task_values.dart';
+import 'package:todolist/shared/values/screen.dart';
+import 'package:todolist/shared/values/theme_values.dart';
 import 'package:todolist/views/task/widgets/task_app_bar.dart';
 import 'package:todolist/views/task/widgets/task_item.dart';
-import '../../models/task.dart';
 import '../../shared/components/my_text.dart';
-import '../../shared/values/screen.dart';
-import '../../shared/values/theme_values.dart';
 
 /// TaskView is the main screen for managing tasks.
-/// It displays a list of tasks with filtering, reordering, and pull-to-refresh functionality.
+///
+/// This widget displays a list of tasks with filtering, reordering, and pull-to-refresh functionality.
+/// It interacts with the [TaskPresenter] to handle business logic and state management.
 class TaskView extends StatefulWidget {
   const TaskView({super.key});
 
@@ -30,9 +32,10 @@ class _TaskViewState extends State<TaskView>
   late final TaskPresenterContract _presenter;
   late final AnimationController _animationController;
 
-  /// Initialize the state for the animation controller and task presenter.
+  /// Initializes the state for the animation controller and task presenter.
   ///
   /// The [AnimationController] is used for UI animations.
+  ///
   /// The [TaskPresenter] handles business logic and interacts with the repository and provider.
   @override
   void initState() {
@@ -57,7 +60,7 @@ class _TaskViewState extends State<TaskView>
     );
   }
 
-  /// Dispose of resources to prevent memory leaks.
+  /// Disposes of resources to prevent memory leaks.
   ///
   /// The [AnimationController] must be disposed when the widget is removed from the tree.
   @override
@@ -66,9 +69,12 @@ class _TaskViewState extends State<TaskView>
     super.dispose();
   }
 
-  /// Show an error message using the FlutterToast package.
+  /// Displays an error message using the FlutterToast package.
   ///
   /// This method is called by the presenter when an error occurs.
+  ///
+  /// Parameters:
+  /// - [message]: The error message to display.
   @override
   void showError(String message) {
     if (mounted) {
@@ -80,128 +86,125 @@ class _TaskViewState extends State<TaskView>
     }
   }
 
-  /// Filter tasks based on the search query.
-  ///
-  /// If the search query is empty, return all tasks.
-  /// Otherwise, return tasks whose names contain the search query (case-insensitive).
-  List<Task> filteredTasksFunction(List<Task> tasks) =>
-      TaskValues(context).watch.searchQuery.isEmpty
-          ? tasks
-          : tasks
-              .where(
-                (task) => task.name.toLowerCase().contains(
-                  TaskValues(context).watch.searchQuery,
-                ),
-              )
-              .toList();
-
   @override
   Widget build(BuildContext context) {
+    final taskValues = TaskValues(context).watch; // Use the TaskValues wrapper
+    final filteredTasks = taskValues.filteredTasks; // Watch filtered tasks
+    final tasks = taskValues.tasks; // Watch the full task list
+    final isLoading = taskValues.isLoading; // Watch loading state
+
     return Scaffold(
       appBar: TaskAppBar(
         animationController: _animationController,
         presenter: _presenter,
       ),
-      body: Consumer<TaskProvider>(
-        builder: (context, provider, child) {
-          final tasks = provider.tasks;
-          final filteredTasks = filteredTasksFunction(tasks);
+      body: _buildBody(filteredTasks, tasks, isLoading),
+    );
+  }
 
-          if (provider.isLoading) {
-            return Center(
-              child: CircularProgressIndicator(
-                color: ThemeValues(context).colorScheme.secondary,
-              ),
-            );
-          }
+  /// Builds the main body of the screen based on the current state.
+  ///
+  /// Parameters:
+  /// - [filteredTasks]: The list of tasks filtered by the search query.
+  /// - [tasks]: The complete list of tasks.
+  /// - [isLoading]: Whether tasks are currently being loaded.
+  Widget _buildBody(
+    List<Task> filteredTasks,
+    List<Task> tasks,
+    bool isLoading,
+  ) {
+    if (isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: ThemeValues(context).colorScheme.secondary,
+        ),
+      );
+    }
 
-          if (tasks.isEmpty) {
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.do_disturb_alt_outlined,
-                    color: ThemeValues(context).colorScheme.onSurface,
-                  ),
-                  SizedBox(height: 10),
-                  MyText(
-                    'No tasks available.',
-                    color: ThemeValues(context).colorScheme.onSurface,
-                  ),
-                ],
-              ),
-            );
-          }
+    if (tasks.isEmpty) {
+      return _buildEmptyState();
+    }
 
-          return LiquidPullToRefresh(
-            onRefresh: () async => await _presenter.readTasks(),
-            color: ThemeValues(context).colorScheme.secondary,
-            backgroundColor: ThemeValues(context).colorScheme.onSecondary,
-            height: 125,
-            showChildOpacityTransition: false,
-            animSpeedFactor: 2,
-            child: Padding(
-              padding: Screen.padding.all,
-              child: Column(
-                children: [
-                  Expanded(
-                    child:
-                        filteredTasks.isEmpty
-                            ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.search_off_rounded,
-                                    color:
-                                        ThemeValues(
-                                          context,
-                                        ).colorScheme.onSurface,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  MyText(
-                                    'No tasks found.',
-                                    color:
-                                        ThemeValues(
-                                          context,
-                                        ).colorScheme.onSurface,
-                                  ),
-                                ],
-                              ),
-                            )
-                            : ReorderableListView.builder(
-                              buildDefaultDragHandles: false,
-                              itemCount: filteredTasks.length,
-                              itemBuilder:
-                                  (context, index) => TaskItem(
-                                    key: ValueKey(index),
-                                    index: index,
-                                    tasks: tasks,
-                                    animationController: _animationController,
-                                    task: filteredTasks[index],
-                                    presenter: _presenter,
-                                  ),
-                              onReorder: (oldIndex, newIndex) async {
-                                if (oldIndex < newIndex) newIndex -= 1;
-                                await _presenter.reorderTasks(
-                                  oldIndex,
-                                  newIndex,
-                                );
-                              },
-                              proxyDecorator:
-                                  (child, _, _) => Material(
-                                    elevation: 0,
-                                    color: Colors.transparent,
-                                    child: child,
-                                  ),
+    return LiquidPullToRefresh(
+      onRefresh: () async => await _presenter.readTasks(),
+      color: ThemeValues(context).colorScheme.secondary,
+      backgroundColor: ThemeValues(context).colorScheme.onSecondary,
+      height: 125,
+      showChildOpacityTransition: false,
+      animSpeedFactor: 2,
+      child: Padding(
+        padding: Screen.padding.all,
+        child: Column(
+          children: [
+            Expanded(
+              child:
+                  filteredTasks.isEmpty
+                      ? _buildNoResultsState()
+                      : ReorderableListView.builder(
+                        buildDefaultDragHandles: false,
+                        itemCount: filteredTasks.length,
+                        itemBuilder:
+                            (context, index) => TaskItem(
+                              key: ValueKey(index),
+                              index: index,
+                              tasks: tasks,
+                              task: filteredTasks[index],
+                              presenter: _presenter,
                             ),
-                  ),
-                ],
-              ),
+                        onReorder: (oldIndex, newIndex) async {
+                          if (oldIndex < newIndex) newIndex -= 1;
+                          await _presenter.reorderTasks(oldIndex, newIndex);
+                        },
+                        proxyDecorator:
+                            (child, _, __) => Material(
+                              elevation: 0,
+                              color: Colors.transparent,
+                              child: child,
+                            ),
+                      ),
             ),
-          );
-        },
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds the empty state UI when no tasks are available.
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.do_disturb_alt_outlined,
+            color: ThemeValues(context).colorScheme.onSurface,
+          ),
+          const SizedBox(height: 10),
+          MyText(
+            'No tasks available.',
+            color: ThemeValues(context).colorScheme.onSurface,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds the no results state UI when no tasks match the search query.
+  Widget _buildNoResultsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off_rounded,
+            color: ThemeValues(context).colorScheme.onSurface,
+          ),
+          const SizedBox(height: 10),
+          MyText(
+            'No tasks found.',
+            color: ThemeValues(context).colorScheme.onSurface,
+          ),
+        ],
       ),
     );
   }
