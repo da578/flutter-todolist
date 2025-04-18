@@ -32,18 +32,28 @@ const TaskSchema = CollectionSchema(
       name: r'name',
       type: IsarType.string,
     ),
-    r'order': PropertySchema(
+    r'onCreated': PropertySchema(
       id: 3,
+      name: r'onCreated',
+      type: IsarType.dateTime,
+    ),
+    r'onUpdated': PropertySchema(
+      id: 4,
+      name: r'onUpdated',
+      type: IsarType.dateTime,
+    ),
+    r'order': PropertySchema(
+      id: 5,
       name: r'order',
       type: IsarType.long,
     ),
     r'reminder': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'reminder',
       type: IsarType.dateTime,
     ),
     r'status': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'status',
       type: IsarType.bool,
     )
@@ -82,9 +92,11 @@ void _taskSerialize(
   writer.writeDateTime(offsets[0], object.deadline);
   writer.writeString(offsets[1], object.description);
   writer.writeString(offsets[2], object.name);
-  writer.writeLong(offsets[3], object.order);
-  writer.writeDateTime(offsets[4], object.reminder);
-  writer.writeBool(offsets[5], object.status);
+  writer.writeDateTime(offsets[3], object.onCreated);
+  writer.writeDateTime(offsets[4], object.onUpdated);
+  writer.writeLong(offsets[5], object.order);
+  writer.writeDateTime(offsets[6], object.reminder);
+  writer.writeBool(offsets[7], object.status);
 }
 
 Task _taskDeserialize(
@@ -98,9 +110,11 @@ Task _taskDeserialize(
     description: reader.readStringOrNull(offsets[1]) ?? '',
     id: id,
     name: reader.readString(offsets[2]),
-    order: reader.readLongOrNull(offsets[3]),
-    reminder: reader.readDateTimeOrNull(offsets[4]),
-    status: reader.readBoolOrNull(offsets[5]) ?? false,
+    onCreated: reader.readDateTimeOrNull(offsets[3]),
+    onUpdated: reader.readDateTimeOrNull(offsets[4]),
+    order: reader.readLongOrNull(offsets[5]),
+    reminder: reader.readDateTimeOrNull(offsets[6]),
+    status: reader.readBoolOrNull(offsets[7]) ?? false,
   );
   return object;
 }
@@ -119,10 +133,14 @@ P _taskDeserializeProp<P>(
     case 2:
       return (reader.readString(offset)) as P;
     case 3:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 5:
+      return (reader.readLongOrNull(offset)) as P;
+    case 6:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 7:
       return (reader.readBoolOrNull(offset) ?? false) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -596,6 +614,144 @@ extension TaskQueryFilter on QueryBuilder<Task, Task, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterFilterCondition> onCreatedIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'onCreated',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onCreatedIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'onCreated',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onCreatedEqualTo(
+      DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'onCreated',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onCreatedGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'onCreated',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onCreatedLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'onCreated',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onCreatedBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'onCreated',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onUpdatedIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'onUpdated',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onUpdatedIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'onUpdated',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onUpdatedEqualTo(
+      DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'onUpdated',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onUpdatedGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'onUpdated',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onUpdatedLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'onUpdated',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> onUpdatedBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'onUpdated',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterFilterCondition> orderIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -784,6 +940,30 @@ extension TaskQuerySortBy on QueryBuilder<Task, Task, QSortBy> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterSortBy> sortByOnCreated() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'onCreated', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortByOnCreatedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'onCreated', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortByOnUpdated() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'onUpdated', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortByOnUpdatedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'onUpdated', Sort.desc);
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterSortBy> sortByOrder() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'order', Sort.asc);
@@ -870,6 +1050,30 @@ extension TaskQuerySortThenBy on QueryBuilder<Task, Task, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterSortBy> thenByOnCreated() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'onCreated', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenByOnCreatedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'onCreated', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenByOnUpdated() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'onUpdated', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenByOnUpdatedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'onUpdated', Sort.desc);
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterSortBy> thenByOrder() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'order', Sort.asc);
@@ -928,6 +1132,18 @@ extension TaskQueryWhereDistinct on QueryBuilder<Task, Task, QDistinct> {
     });
   }
 
+  QueryBuilder<Task, Task, QDistinct> distinctByOnCreated() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'onCreated');
+    });
+  }
+
+  QueryBuilder<Task, Task, QDistinct> distinctByOnUpdated() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'onUpdated');
+    });
+  }
+
   QueryBuilder<Task, Task, QDistinct> distinctByOrder() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'order');
@@ -969,6 +1185,18 @@ extension TaskQueryProperty on QueryBuilder<Task, Task, QQueryProperty> {
   QueryBuilder<Task, String, QQueryOperations> nameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'name');
+    });
+  }
+
+  QueryBuilder<Task, DateTime?, QQueryOperations> onCreatedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'onCreated');
+    });
+  }
+
+  QueryBuilder<Task, DateTime?, QQueryOperations> onUpdatedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'onUpdated');
     });
   }
 
