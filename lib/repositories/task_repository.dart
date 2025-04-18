@@ -33,6 +33,7 @@ class TaskRepository implements TaskRepositoryContract {
   /// Adds a single task to the database.
   ///
   /// If the task ID is not specified, Isar will automatically assign one.
+  ///
   /// Throws an exception if the task name is empty or contains only whitespace.
   @override
   Future<void> createSingleTask(Task task) async {
@@ -132,9 +133,62 @@ class TaskRepository implements TaskRepositoryContract {
     await _isar.writeTxn(() => _isar.tasks.putAll(tasks));
   }
 
+  /// Sorts tasks based on the specified sorting option.
+  ///
+  /// Supported options:
+  /// - `ascending`: Sorts tasks by name in ascending order.
+  /// - `descending`: Sorts tasks by name in descending order.
+  /// - `nearest_deadline`: Sorts tasks by nearest deadline.
+  /// - `farthest_deadline`: Sorts tasks by farthest deadline.
+  /// - `nearest_reminder`: Sorts tasks by nearest reminder.
+  /// - `farthest_reminder`: Sorts tasks by farthest reminder.
+  /// - `completed_first`: Sorts tasks by completion status (completed first).
+  /// - `newest_first`: Sorts tasks by creation date (newest first).
+  /// - `oldest_first`: Sorts tasks by creation date (oldest first).
+  ///
+  /// Throws an [Exception] if the provided option is invalid.
+  @override
+  Future<List<Task>> sortTasks(String option) async {
+    final Map<String, Future<List<Task>> Function()> sortFunctions = {
+      'ascending':
+          () => _isar.txn(() => _isar.tasks.where().sortByName().findAll()),
+      'descending':
+          () => _isar.txn(() => _isar.tasks.where().sortByNameDesc().findAll()),
+      'nearest_deadline':
+          () => _isar.txn(() => _isar.tasks.where().sortByDeadline().findAll()),
+      'farthest_deadline':
+          () => _isar.txn(
+            () => _isar.tasks.where().sortByDeadlineDesc().findAll(),
+          ),
+      'nearest_reminder':
+          () => _isar.txn(() => _isar.tasks.where().sortByReminder().findAll()),
+      'farthest_reminder':
+          () => _isar.txn(
+            () => _isar.tasks.where().sortByReminderDesc().findAll(),
+          ),
+      'completed_first':
+          () =>
+              _isar.txn(() => _isar.tasks.where().sortByStatusDesc().findAll()),
+      'newest_first':
+          () => _isar.txn(
+            () => _isar.tasks.where().sortByOnCreatedDesc().findAll(),
+          ),
+      'oldest_first':
+          () =>
+              _isar.txn(() => _isar.tasks.where().sortByOnCreated().findAll()),
+    };
+
+    if (!sortFunctions.containsKey(option)) {
+      throw ArgumentError('Option is not valid!');
+    }
+
+    return await sortFunctions[option]!();
+  }
+
   /// Deletes a task by its unique ID.
   ///
   /// Removes the task with the specified ID from the database.
+  ///
   /// Throws an [Exception] if the task with the given ID is not found.
   @override
   Future<void> deleteTask(int id) async {
