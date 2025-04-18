@@ -148,7 +148,6 @@ class _TaskViewState extends State<TaskView>
                               key: ValueKey(index),
                               index: index,
                               tasks: tasks,
-                              animationController: _animationController,
                               task: filteredTasks[index],
                               presenter: _presenter,
                             ),
