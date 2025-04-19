@@ -92,13 +92,33 @@ class _TaskViewState extends State<TaskView>
     final filteredTasks = taskValues.filteredTasks; // Watch filtered tasks
     final tasks = taskValues.tasks; // Watch the full task list
     final isLoading = taskValues.isLoading; // Watch loading state
+    final isCreating = taskValues.isCreating; // Watch is creating state
+    final isExporting = taskValues.isExporting; // Watch is exporting state
+    final isImporting = taskValues.isImporting; // Watch is importing state
 
-    return Scaffold(
-      appBar: TaskAppBar(
-        animationController: _animationController,
-        presenter: _presenter,
-      ),
-      body: _buildBody(filteredTasks, tasks, isLoading),
+    // Determine the top offset based on the current state
+    double topOffset = 0;
+    if (isCreating) topOffset = -50;
+    if (isExporting || isImporting) topOffset = -75;
+
+    return Stack(
+      children: [
+        AnimatedPositioned(
+          duration: Screen.duration,
+          curve: Screen.curve,
+          top: topOffset,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Scaffold(
+            appBar: TaskAppBar(
+              animationController: _animationController,
+              presenter: _presenter,
+            ),
+            body: _buildBody(filteredTasks, tasks, isLoading),
+          ),
+        ),
+      ],
     );
   }
 
@@ -121,9 +141,7 @@ class _TaskViewState extends State<TaskView>
       );
     }
 
-    if (tasks.isEmpty) {
-      return _buildEmptyState();
-    }
+    if (tasks.isEmpty) return _buildEmptyState();
 
     return LiquidPullToRefresh(
       onRefresh: () async => await _presenter.readTasks(),
