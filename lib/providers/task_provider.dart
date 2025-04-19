@@ -18,6 +18,15 @@ class TaskProvider with ChangeNotifier {
   /// The filtered list of tasks based on the search query.
   List<Task> _filteredTasks = [];
 
+  /// Indicates whether a task creation bottom sheet is currently open.
+  bool _isCreating = false;
+
+  /// Indicates whether a task export bottom sheet is currently open.
+  bool _isExporting = false;
+
+  /// Indicates whether a task import bottom sheet is currently open.
+  bool _isImporting = false;
+
   /// Indicates whether the app is currently in search mode.
   bool _isSearching = false;
 
@@ -45,6 +54,15 @@ class TaskProvider with ChangeNotifier {
   /// Returns the filtered list of tasks based on the search query.
   List<Task> get filteredTasks => _filteredTasks;
 
+  /// Returns whether a task creation bottom sheet is currently open.
+  bool get isCreating => _isCreating;
+
+  /// Returns whether a task export bottom sheet is currently open.
+  bool get isExporting => _isExporting;
+
+  /// Returns whether a task import bottom sheet is currently open.
+  bool get isImporting => _isImporting;
+
   /// Returns whether the app is currently in search mode.
   bool get isSearching => _isSearching;
 
@@ -62,6 +80,39 @@ class TaskProvider with ChangeNotifier {
 
   /// Returns the IDs of tasks that have been deleted during the current session.
   Set<int> get deletedIds => _deletedIds;
+
+  /// Sets the state of task creation.
+  ///
+  /// Parameters:
+  /// - [value]: Whether a task creation bottom sheet is open.
+  void setIsCreating(bool value) {
+    if (_isCreating != value) {
+      _isCreating = value;
+      notifyListeners();
+    }
+  }
+
+  /// Sets the state of task export.
+  ///
+  /// Parameters:
+  /// - [value]: Whether a task export bottom sheet is open.
+  void setIsExporting(bool value) {
+    if (_isExporting != value) {
+      _isExporting = value;
+      notifyListeners();
+    }
+  }
+
+  /// Sets the state of task import.
+  ///
+  /// Parameters:
+  /// - [value]: Whether a task import bottom sheet is open.
+  void setIsImporting(bool value) {
+    if (_isImporting != value) {
+      _isImporting = value;
+      notifyListeners();
+    }
+  }
 
   /// Sets the search mode state.
   ///
