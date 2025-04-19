@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -10,7 +12,13 @@ import 'package:timezone/data/latest_all.dart' as tz;
 /// and schedule reminder or deadline notifications. It ensures proper handling
 /// of time zones, permissions, and platform-specific configurations.
 class NotificationService {
+  /// The instance of [FlutterLocalNotificationsPlugin] used for notifications.
   static final _plugin = FlutterLocalNotificationsPlugin();
+
+  /// A map to store active timers for countdown notifications.
+  ///
+  /// Each notification ID is associated with a timer that updates the countdown.
+  static final Map<String, Timer> _activeTimers = {};
 
   /// Initializes the notification plugin and its dependencies.
   ///
@@ -19,6 +27,7 @@ class NotificationService {
   /// 2. Sets up platform-specific initialization settings.
   /// 3. Requests necessary permissions for notifications and exact alarms.
   static Future<void> initialize() async {
+    // Initialize time zones and set the local time zone.
     tz.initializeTimeZones();
     final String localTimeZone = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(localTimeZone));
@@ -39,11 +48,16 @@ class NotificationService {
       final exactAlarmsPermission =
           await androidPlugin.requestExactAlarmsPermission();
 
+      // Open app settings if permissions are not granted.
       if (notificationPermission == null ||
           !notificationPermission ||
           exactAlarmsPermission == null ||
           !exactAlarmsPermission) {
-        openAppSettings();
+        if (!await openAppSettings()) {
+          throw Exception(
+            'Open App Settings to allow Notifications and Exact Alarms Permissions',
+          );
+        }
       }
     }
 
@@ -61,19 +75,20 @@ class NotificationService {
       guid: 'bbbcb6a1-264b-4f2a-83ac-af90e4fed3ef',
     );
 
+    // Combine all platform-specific settings.
     const initSettings = InitializationSettings(
       android: androidInitialize,
       iOS: iosInitialize,
       windows: windowsInitialize,
     );
 
+    // Initialize the plugin with the combined settings.
     await _plugin.initialize(initSettings);
   }
 
   /// Displays an instant notification.
   ///
-  /// This method is used to show a notification immediately with the given
-  /// title and body.
+  /// This method shows a notification immediately with the given title and body.
   ///
   /// Parameters:
   /// - [title]: The title of the notification (required).
@@ -103,7 +118,9 @@ class NotificationService {
   /// - [id]: A unique identifier for the notification.
   /// - [time]: The scheduled time for the notification.
   /// - [title]: The title of the notification.
-  /// - [body]: The body of the notification
+  /// - [body]: The body of the notification.
+  ///
+  /// Throws an error if the scheduled time has already passed.
   static Future<void> scheduleReminder(
     String id,
     DateTime time,
@@ -113,7 +130,7 @@ class NotificationService {
     final now = tz.TZDateTime.now(tz.local);
 
     if (time.isBefore(now)) {
-      throw Exception('Schedule time reminder has already passed: $time');
+      throw Exception('Scheduled time reminder has already passed: $time');
     }
 
     await _plugin.zonedSchedule(
@@ -133,17 +150,17 @@ class NotificationService {
     );
   }
 
-  /// Schedules a deadline notification for a task.
-  ///
-  /// This method schedules a notification to alert the user when a task's
-  /// deadline is approaching or has been reached. If the deadline has already
-  /// passed, no notification will be scheduled.
+  /// Schedules two notifications for a task's deadline:
+  /// 1. An ongoing countdown notification that cannot be dismissed.
+  /// 2. A one-time notification that triggers exactly at the deadline.
   ///
   /// Parameters:
-  /// - [id]: A unique identifier for the notification.
+  /// - [id]: A unique identifier for the task.
   /// - [time]: The deadline time for the task.
   /// - [title]: The title of the notification.
   /// - [body]: The body of the notification.
+  ///
+  /// Throws an error if the deadline time has already passed.
   static Future<void> scheduleDeadline(
     String id,
     DateTime time,
@@ -153,11 +170,97 @@ class NotificationService {
     final now = tz.TZDateTime.now(tz.local);
 
     if (time.isBefore(now)) {
-      throw Exception('Schedule time deadline has already passed: $time');
+      throw Exception('Scheduled time deadline has already passed: $time');
     }
 
+    // Schedule the ongoing countdown notification.
+    await _scheduleCountdownNotification(id, time, title, body);
+
+    // Schedule the deadline notification.
+    await _scheduleDeadlineNotification(id, time, title, body);
+  }
+
+  /// Schedules an ongoing countdown notification.
+  ///
+  /// This method creates a periodic timer that updates the notification every second
+  /// until the deadline is reached.
+  ///
+  /// Parameters:
+  /// - [id]: A unique identifier for the task.
+  /// - [time]: The deadline time for the task.
+  /// - [title]: The title of the notification.
+  /// - [body]: The body of the notification.
+  static Future<void> _scheduleCountdownNotification(
+    String id,
+    DateTime time,
+    String title,
+    String body,
+  ) async {
+    if (_activeTimers.containsKey(id)) {
+      _activeTimers[id]?.cancel();
+      _activeTimers.remove(id);
+    }
+
+    int iteration = 0;
+
+    final Timer countdownTimer = Timer.periodic(const Duration(seconds: 1), (
+      timer,
+    ) async {
+      final now = tz.TZDateTime.now(tz.local);
+      final remaining = time.difference(now);
+
+      // Stop the timer if the deadline has passed.
+      if (remaining.isNegative) {
+        timer.cancel();
+        await _plugin.cancel('${id}_countdown'.hashCode);
+        return;
+      }
+
+      // Update the countdown notification.
+      final countdownTitle = '$title (Countdown)';
+      final countdownBody = 'Time left: ${_formatDuration(remaining)}';
+
+      await _plugin.show(
+        '${id}_countdown'.hashCode,
+        countdownTitle,
+        countdownBody,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'countdown_channel',
+            'Countdown',
+            channelDescription: 'Ongoing countdown notifications',
+            ongoing: true,
+            autoCancel: false,
+            priority: Priority.high,
+            importance: Importance.max,
+            silent: iteration > 0,
+          ),
+        ),
+      );
+
+      iteration++;
+    });
+
+    _activeTimers[id] = countdownTimer;
+  }
+
+  /// Schedules a one-time notification for the task's deadline.
+  ///
+  /// This method triggers a notification exactly at the specified deadline time.
+  ///
+  /// Parameters:
+  /// - [id]: A unique identifier for the task.
+  /// - [time]: The deadline time for the task.
+  /// - [title]: The title of the notification.
+  /// - [body]: The body of the notification.
+  static Future<void> _scheduleDeadlineNotification(
+    String id,
+    DateTime time,
+    String title,
+    String body,
+  ) async {
     await _plugin.zonedSchedule(
-      id.hashCode,
+      '${id}_deadline'.hashCode,
       title,
       body,
       tz.TZDateTime.from(time, tz.local),
@@ -171,5 +274,19 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dateAndTime,
     );
+  }
+
+  /// Formats a [Duration] into a human-readable string (e.g., "1h 30m 45s").
+  ///
+  /// Parameters:
+  /// - [duration]: The duration to format.
+  ///
+  /// Returns a formatted string representing the duration.
+  static String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+
+    return '${hours}h ${minutes}m ${seconds}s';
   }
 }
