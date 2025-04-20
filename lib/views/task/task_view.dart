@@ -93,12 +93,14 @@ class _TaskViewState extends State<TaskView>
     final tasks = taskValues.tasks; // Watch the full task list
     final isLoading = taskValues.isLoading; // Watch loading state
     final isCreating = taskValues.isCreating; // Watch is creating state
+    final isUpdating = taskValues.isUpdating; // Watch is updating state
     final isExporting = taskValues.isExporting; // Watch is exporting state
     final isImporting = taskValues.isImporting; // Watch is importing state
 
     // Determine the top offset based on the current state
     double topOffset = 0;
     if (isCreating) topOffset = -50;
+    if (isUpdating) topOffset = -150;
     if (isExporting || isImporting) topOffset = -75;
 
     return Stack(
