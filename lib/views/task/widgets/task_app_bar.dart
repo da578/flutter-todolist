@@ -97,12 +97,9 @@ class _TaskAppBarState extends State<TaskAppBar> {
         animation: widget._animationController,
         builder: (_, __) => _buildSearchBar(widget._animationController.value),
       ),
-      Visibility(
-        visible: !_isSearching,
-        child: TaskMenu(
-          animationController: widget._animationController,
-          presenter: widget._presenter,
-        ),
+      TaskMenu(
+        animationController: widget._animationController,
+        presenter: widget._presenter,
       ),
     ],
   );
@@ -117,14 +114,18 @@ class _TaskAppBarState extends State<TaskAppBar> {
     clipBehavior: Clip.antiAlias,
     child: Row(
       mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Transform.translate(
-          offset: Offset(animationValue * -50, 0), // Smooth translation effect
-          child: IconButton(
-            onPressed: _toggleSearchMode,
-            icon: Icon(Icons.search),
-            color: ThemeValues(context).colorScheme.onSurface,
-          ),
+          offset: Offset(animationValue * -50, 0),
+          child:
+              !_isSearching
+                  ? IconButton(
+                    onPressed: _toggleSearchMode,
+                    icon: Icon(Icons.search),
+                    color: ThemeValues(context).colorScheme.onSurface,
+                  )
+                  : null,
         ),
         Opacity(
           opacity: animationValue,
