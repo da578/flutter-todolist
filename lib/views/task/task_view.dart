@@ -51,7 +51,7 @@ class _TaskViewState extends State<TaskView>
     // Initialize the animation controller for UI transitions.
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: Screen.duration,
     );
 
     // Fetch tasks after the widget is fully built.
