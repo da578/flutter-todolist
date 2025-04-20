@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:todolist/contracts/task_presenter_contract.dart';
 import 'package:todolist/shared/components/my_bottom_sheet.dart';
 import 'package:todolist/shared/components/my_text.dart';
+import 'package:todolist/shared/values/task_values.dart';
 import 'package:todolist/shared/values/theme_values.dart';
 import 'package:todolist/views/task/widgets/task_create.dart';
 import 'package:todolist/views/task/widgets/task_export.dart';
@@ -56,12 +57,19 @@ class TaskMenu extends StatelessWidget {
   /// When tapped, it shows a bottom sheet for creating a new task.
   PopupMenuItem<void> _buildCreateMenuItem(BuildContext context) {
     return PopupMenuItem(
-      onTap:
-          () => MyBottomSheet.show(
-            context: context,
-            animationController: _animationController,
-            builder: (_) => TaskCreate(presenter: _presenter),
-          ),
+      onTap: () {
+        // Set isCreating to true before showing the bottom sheet
+        TaskValues(context).read.setIsCreating(true);
+
+        MyBottomSheet.show(
+          context: context,
+          animationController: _animationController,
+          builder: (_) => TaskCreate(presenter: _presenter),
+        ).whenComplete(() {
+          // Reset isCreating to false when the bottom sheet is closed
+          if (context.mounted) TaskValues(context).read.setIsCreating(false);
+        });
+      },
       child: Row(
         children: [
           Icon(Icons.add, color: ThemeValues(context).colorScheme.onSurface),
@@ -78,11 +86,16 @@ class TaskMenu extends StatelessWidget {
   PopupMenuItem<void> _buildExportMenuItem(BuildContext context) {
     return PopupMenuItem(
       onTap: () async {
-        if (!context.mounted) return;
+        // Set isExporting to true before showing the bottom sheet
+        TaskValues(context).read.setIsExporting(true);
+
         MyBottomSheet.show(
           context: context,
           builder: (_) => TaskExport(presenter: _presenter),
-        );
+        ).whenComplete(() {
+          // Reset isExporting to false when the bottom sheet is closed
+          if (context.mounted) TaskValues(context).read.setIsExporting(false);
+        });
       },
       child: Row(
         children: [
@@ -100,11 +113,16 @@ class TaskMenu extends StatelessWidget {
   PopupMenuItem<void> _buildImportMenuItem(BuildContext context) {
     return PopupMenuItem(
       onTap: () async {
-        if (!context.mounted) return;
+        // Set isImporting to true before showing the bottom sheet
+        TaskValues(context).read.setIsImporting(true);
+
         MyBottomSheet.show(
           context: context,
           builder: (_) => TaskImport(presenter: _presenter),
-        );
+        ).whenComplete(() {
+          // Reset isImporting to false when the bottom sheet is closed
+          if (context.mounted) TaskValues(context).read.setIsImporting(false);
+        });
       },
       child: Row(
         children: [

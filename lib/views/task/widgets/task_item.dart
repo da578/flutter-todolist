@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:lottie/lottie.dart';
+import 'package:rive/rive.dart';
 import 'package:todolist/contracts/task_presenter_contract.dart';
 import 'package:todolist/models/task.dart';
 import 'package:todolist/shared/components/my_alert_dialog.dart';
@@ -17,14 +19,12 @@ import 'package:todolist/views/task/widgets/task_update.dart';
 /// This widget provides functionality for interacting with tasks, such as marking them
 /// as complete, updating them, or deleting them. It also supports animations and swipe
 /// actions for better user experience.
-class TaskItem extends StatelessWidget {
+class TaskItem extends StatefulWidget {
   /// The index of the task in the list.
   final int _index;
 
   /// The complete list of tasks.
   final List<Task> _tasks;
-
-
 
   /// The task represented by this widget.
   final Task _task;
@@ -52,6 +52,29 @@ class TaskItem extends StatelessWidget {
        _index = index;
 
   @override
+  State<TaskItem> createState() => _TaskItemState();
+}
+
+class _TaskItemState extends State<TaskItem> {
+  Artboard? _artboard;
+
+  @override
+  void initState() {
+    rootBundle.load('lib/assets/animations/confetti.riv').then((data) async {
+      try {
+        final file = RiveFile.import(data);
+        final artboard = file.mainArtboard;
+        final controller = StateMachineController.fromArtboard(
+          artboard,
+          'bruh',
+        );
+      } catch (e) {
+        print(e);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) => _buildAnimatedTaskItem(context);
 
   /// Builds the animated task item with effects based on its state.
@@ -61,9 +84,9 @@ class TaskItem extends StatelessWidget {
     final effects = _getAnimationEffects(context);
     return Animate(
       effects: effects,
-      delay: Duration(milliseconds: _index * 100),
+      delay: Duration(milliseconds: widget._index * 100),
       onComplete: (_) {
-        if (_task.id == _tasks.last.id) {
+        if (widget._task.id == widget._tasks.last.id) {
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => TaskValues(context).read.reset(),
           );
@@ -71,9 +94,21 @@ class TaskItem extends StatelessWidget {
       },
       child: GestureDetector(
         onTap: () => _navigateToUpdateTaskScreen(context),
-        child: Padding(
-          padding: const EdgeInsets.only(top: 20),
+        child: AnimatedContainer(
+          duration: Screen.duration,
+          margin: const EdgeInsets.only(top: 20),
+          decoration: BoxDecoration(
+            border:
+                !widget._task.status
+                    ? Border.all(
+                      color: ThemeValues(context).colorScheme.primary,
+                      width: 2,
+                    )
+                    : null,
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: ClipRRect(
+            clipBehavior: Clip.antiAlias,
             borderRadius: BorderRadius.circular(10),
             child: Slidable(
               startActionPane: _buildUpdateActionPane(context),
@@ -93,7 +128,7 @@ class TaskItem extends StatelessWidget {
     final createdIds = TaskValues(context).watch.createdIds;
     final updatedIds = TaskValues(context).watch.updatedIds;
 
-    if (createdIds.contains(_task.id)) {
+    if (createdIds.contains(widget._task.id)) {
       return [
         ScaleEffect(
           begin: Offset.zero,
@@ -101,7 +136,7 @@ class TaskItem extends StatelessWidget {
           duration: Screen.duration,
         ),
       ];
-    } else if (updatedIds.contains(_task.id)) {
+    } else if (updatedIds.contains(widget._task.id)) {
       return [FadeEffect(begin: 0, end: 1, duration: Screen.duration)];
     } else {
       return [
@@ -121,7 +156,11 @@ class TaskItem extends StatelessWidget {
       motion: const ScrollMotion(),
       children: [
         SlidableAction(
-          backgroundColor: Colors.amber,
+          backgroundColor:
+              widget._task.status
+                  ? Colors.amber
+                  : ThemeValues(context).colorScheme.surfaceContainerHigh,
+          foregroundColor: widget._task.status ? Colors.black : Colors.amber,
           icon: Icons.edit_outlined,
           label: 'Update',
           borderRadius: const BorderRadius.only(
@@ -140,7 +179,14 @@ class TaskItem extends StatelessWidget {
       motion: const ScrollMotion(),
       children: [
         SlidableAction(
-          backgroundColor: Colors.red,
+          backgroundColor:
+              widget._task.status
+                  ? Colors.red
+                  : ThemeValues(context).colorScheme.surfaceContainerHigh,
+          foregroundColor:
+              widget._task.status
+                  ? Colors.white
+                  : ThemeValues(context).colorScheme.onSurface,
           icon: Icons.delete_outline_rounded,
           label: 'Delete',
           onPressed: (_) => _showDeleteConfirmationDialog(context),
@@ -168,7 +214,7 @@ class TaskItem extends StatelessWidget {
                     children: [
                       const TextSpan(text: 'Are you sure want to delete '),
                       TextSpan(
-                        text: _task.name,
+                        text: widget._task.name,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const TextSpan(text: ' task?'),
@@ -193,7 +239,7 @@ class TaskItem extends StatelessWidget {
                   ThemeValues(context).colorScheme.primary,
                 ),
                 onPressed: () async {
-                  await _presenter.deleteTask(_task.id);
+                  await widget._presenter.deleteTask(widget._task.id);
                   if (context.mounted) Navigator.pop(context);
                 },
                 child: MyText(
@@ -208,64 +254,88 @@ class TaskItem extends StatelessWidget {
 
   /// Builds the container for displaying the task details.
   Widget _buildTaskContainer(BuildContext context) {
-    return AnimatedContainer(
-      padding: Screen.padding.all,
-      duration: Screen.duration,
-      curve: Screen.curve,
-      decoration: BoxDecoration(
-        color:
-            _task.status
-                ? Colors.green[500]
-                : ThemeValues(context).colorScheme.primary,
-      ),
-      child: Row(
-        children: [
-          Checkbox(
-            shape: const CircleBorder(),
-            activeColor: Colors.white,
-            checkColor: Colors.green[500],
-            side: BorderSide(
-              color: ThemeValues(context).colorScheme.onPrimary,
-              width: 2,
-            ),
-            value: _task.status,
-            onChanged: (_) async => await _presenter.toggleTaskStatus(_task.id),
-          ),
-          const SizedBox(width: 5),
-          MyText(
-            _task.name,
+    return Stack(
+      children: [
+        AnimatedContainer(
+          padding: Screen.padding.all,
+          duration: Screen.duration,
+          curve: Screen.curve,
+          decoration: BoxDecoration(
             color:
-                _task.status
-                    ? Colors.white
-                    : ThemeValues(context).colorScheme.onPrimary,
-            weight: FontWeight.w500,
-            isLineThrough: _task.status,
-            decorationColor: Colors.white,
+                widget._task.status
+                    ? ThemeValues(context).colorScheme.primary
+                    : ThemeValues(context).colorScheme.surfaceContainerHigh,
           ),
-          const Spacer(),
-          ReorderableDragStartListener(
-            index: _index,
-            child: Icon(
-              Icons.menu,
-              color:
-                  _task.status
-                      ? Colors.white
-                      : ThemeValues(context).colorScheme.onPrimary,
-            ),
+          child: Row(
+            children: [
+              Checkbox(
+                shape: const CircleBorder(),
+                activeColor: ThemeValues(context).colorScheme.onPrimary,
+                checkColor: ThemeValues(context).colorScheme.primary,
+                side: BorderSide(
+                  color: ThemeValues(context).colorScheme.onSurface,
+                  width: 2,
+                ),
+                value: widget._task.status,
+                onChanged:
+                    (_) async => await widget._presenter.toggleTaskStatus(
+                      widget._task.id,
+                    ),
+              ),
+              const SizedBox(width: 5),
+              MyText(
+                widget._task.name,
+                color:
+                    widget._task.status
+                        ? ThemeValues(context).colorScheme.onPrimary
+                        : ThemeValues(context).colorScheme.onSurface,
+                weight: FontWeight.w500,
+                isLineThrough: widget._task.status,
+                decorationColor: ThemeValues(context).colorScheme.onPrimary,
+              ),
+              const Spacer(),
+              ReorderableDragStartListener(
+                index: widget._index,
+                child: Icon(
+                  Icons.menu,
+                  color:
+                      widget._task.status
+                          ? ThemeValues(context).colorScheme.onPrimary
+                          : ThemeValues(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        // widget._task.status
+        //     ? Positioned(
+        //       top: 0,
+        //       right: 0,
+        //       child: SizedBox(
+        //         width: 100, // Atur lebar sesuai kebutuhan
+        //         height: 100, // Atur tinggi sesuai kebutuhan
+        //         child: RiveAnimation.asset(
+        //           'lib/assets/animations/confetti.riv',
+        //           fit: BoxFit.cover,
+        //         ),
+        //       ),
+        //     )
+        //     : SizedBox.shrink(),
+      ],
     );
   }
 
   /// Navigates to the update task screen with a fade and slide transition.
   void _navigateToUpdateTaskScreen(BuildContext context) {
+    TaskValues(context).read.setIsUpdating(true);
     Navigator.push(
       context,
       PageRouteBuilder(
         pageBuilder:
-            (_, __, ___) =>
-                TaskUpdate(initialTask: _task, presenter: _presenter),
+            (_, __, ___) => TaskUpdate(
+              initialTask: widget._task,
+              presenter: widget._presenter,
+            ),
         transitionsBuilder:
             (_, animation, ___, child) => FadeTransition(
               opacity: animation,
@@ -281,6 +351,8 @@ class TaskItem extends StatelessWidget {
             ),
         transitionDuration: Screen.duration,
       ),
-    );
+    ).then((_) {
+      if (context.mounted) TaskValues(context).read.setIsUpdating(false);
+    });
   }
 }

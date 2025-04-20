@@ -1,7 +1,4 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:todolist/shared/values/screen.dart';
 import '../models/task.dart';
 
 /// A provider class for managing the state of tasks in the application.
@@ -18,11 +15,17 @@ class TaskProvider with ChangeNotifier {
   /// The filtered list of tasks based on the search query.
   List<Task> _filteredTasks = [];
 
-  /// Indicates whether the app is currently in search mode.
-  bool _isSearching = false;
+  /// Indicates whether a task creation bottom sheet is currently open.
+  bool _isCreating = false;
 
-  /// Indicates whether the search bar is animating.
-  bool _isSearchingBarAnimating = false;
+  /// Indicates whether a task update bottom sheet is currently open.
+  bool _isUpdating = false;
+
+  /// Indicates whether a task export bottom sheet is currently open.
+  bool _isExporting = false;
+
+  /// Indicates whether a task import bottom sheet is currently open.
+  bool _isImporting = false;
 
   /// Indicates whether tasks are currently being loaded.
   bool _isLoading = true;
@@ -40,46 +43,76 @@ class TaskProvider with ChangeNotifier {
   String get searchQuery => _searchQuery;
 
   /// Returns the complete list of tasks.
-  List<Task> get tasks => _tasks;
+  List<Task> get tasks => List.unmodifiable(_tasks);
 
   /// Returns the filtered list of tasks based on the search query.
-  List<Task> get filteredTasks => _filteredTasks;
+  List<Task> get filteredTasks => List.unmodifiable(_filteredTasks);
 
-  /// Returns whether the app is currently in search mode.
-  bool get isSearching => _isSearching;
+  /// Returns whether a task creation bottom sheet is currently open.
+  bool get isCreating => _isCreating;
 
-  /// Returns whether the search bar is currently animating.
-  bool get isSearchBarAnimating => _isSearchingBarAnimating;
+  /// Returns whether a task update bottom sheet is currently open.
+  bool get isUpdating => _isUpdating;
+
+  /// Returns whether a task export bottom sheet is currently open.
+  bool get isExporting => _isExporting;
+
+  /// Returns whether a task import bottom sheet is currently open.
+  bool get isImporting => _isImporting;
 
   /// Returns whether tasks are currently being loaded.
   bool get isLoading => _isLoading;
 
   /// Returns the IDs of tasks that have been created during the current session.
-  Set<int> get createdIds => _createdIds;
+  Set<int> get createdIds => Set<int>.from(_createdIds);
 
   /// Returns the IDs of tasks that have been updated during the current session.
-  Set<int> get updatedIds => _updatedIds;
+  Set<int> get updatedIds => Set<int>.from(_updatedIds);
 
   /// Returns the IDs of tasks that have been deleted during the current session.
-  Set<int> get deletedIds => _deletedIds;
+  Set<int> get deletedIds => Set<int>.from(_deletedIds);
 
-  /// Sets the search mode state.
+  /// Sets the state of task creation.
   ///
   /// Parameters:
-  /// - [value]: Whether the app should enter or exit search mode.
-  void setIsSearching(bool value) {
-    if (_isSearching != value) {
-      _isSearching = value;
+  /// - [value]: Whether a task creation bottom sheet is open.
+  void setIsCreating(bool value) {
+    if (_isCreating != value) {
+      _isCreating = value;
+      notifyListeners();
+    }
+  }
 
-      if (!value) {
-        _isSearchingBarAnimating = true;
-        Future.delayed(Screen.duration, () {
-          _isSearchingBarAnimating = false;
-          notifyListeners();
-        });
-      } else {
-        notifyListeners();
-      }
+  /// Sets the state of task update.
+  ///
+  /// Parameters:
+  /// - [value]: Whether a task update bottom sheet is open.
+  void setIsUpdating(bool value) {
+    if (_isUpdating != value) {
+      _isUpdating = value;
+      notifyListeners();
+    }
+  }
+
+  /// Sets the state of task export.
+  ///
+  /// Parameters:
+  /// - [value]: Whether a task export bottom sheet is open.
+  void setIsExporting(bool value) {
+    if (_isExporting != value) {
+      _isExporting = value;
+      notifyListeners();
+    }
+  }
+
+  /// Sets the state of task import.
+  ///
+  /// Parameters:
+  /// - [value]: Whether a task import bottom sheet is open.
+  void setIsImporting(bool value) {
+    if (_isImporting != value) {
+      _isImporting = value;
+      notifyListeners();
     }
   }
 
