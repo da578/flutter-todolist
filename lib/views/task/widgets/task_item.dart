@@ -156,7 +156,11 @@ class _TaskItemState extends State<TaskItem> {
       motion: const ScrollMotion(),
       children: [
         SlidableAction(
-          backgroundColor: Colors.amber,
+          backgroundColor:
+              widget._task.status
+                  ? Colors.amber
+                  : ThemeValues(context).colorScheme.surfaceContainerHigh,
+          foregroundColor: widget._task.status ? Colors.black : Colors.amber,
           icon: Icons.edit_outlined,
           label: 'Update',
           borderRadius: const BorderRadius.only(
@@ -175,7 +179,14 @@ class _TaskItemState extends State<TaskItem> {
       motion: const ScrollMotion(),
       children: [
         SlidableAction(
-          backgroundColor: Colors.red,
+          backgroundColor:
+              widget._task.status
+                  ? Colors.red
+                  : ThemeValues(context).colorScheme.surfaceContainerHigh,
+          foregroundColor:
+              widget._task.status
+                  ? Colors.white
+                  : ThemeValues(context).colorScheme.onSurface,
           icon: Icons.delete_outline_rounded,
           label: 'Delete',
           onPressed: (_) => _showDeleteConfirmationDialog(context),
