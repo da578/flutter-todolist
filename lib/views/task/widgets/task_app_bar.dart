@@ -91,7 +91,7 @@ class _TaskAppBarState extends State<TaskAppBar> {
 
   @override
   Widget build(BuildContext context) => MyAppBar(
-    title: _isSearching ? '' : 'To Do List App',
+    title: _isSearching ? '' : 'Flutter To Do List',
     actions: [
       AnimatedBuilder(
         animation: widget._animationController,
