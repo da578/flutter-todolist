@@ -148,7 +148,7 @@ class _TaskViewState extends State<TaskView>
     return LiquidPullToRefresh(
       onRefresh: () async => await _presenter.readTasks(),
       color: ThemeValues(context).colorScheme.secondary,
-      backgroundColor: ThemeValues(context).colorScheme.onSecondary,
+      backgroundColor: ThemeValues(context).colorScheme.onPrimary,
       height: 125,
       showChildOpacityTransition: false,
       animSpeedFactor: 2,
