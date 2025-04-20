@@ -24,8 +24,6 @@ class TaskItem extends StatelessWidget {
   /// The complete list of tasks.
   final List<Task> _tasks;
 
-
-
   /// The task represented by this widget.
   final Task _task;
 
@@ -260,6 +258,7 @@ class TaskItem extends StatelessWidget {
 
   /// Navigates to the update task screen with a fade and slide transition.
   void _navigateToUpdateTaskScreen(BuildContext context) {
+    TaskValues(context).read.setIsUpdating(true);
     Navigator.push(
       context,
       PageRouteBuilder(
@@ -281,6 +280,8 @@ class TaskItem extends StatelessWidget {
             ),
         transitionDuration: Screen.duration,
       ),
-    );
+    ).then((_) {
+      if (context.mounted) TaskValues(context).read.setIsUpdating(false);
+    });
   }
 }
