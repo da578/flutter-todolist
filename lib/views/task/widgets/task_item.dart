@@ -183,10 +183,7 @@ class _TaskItemState extends State<TaskItem> {
               widget._task.status
                   ? Colors.red
                   : ThemeValues(context).colorScheme.surfaceContainerHigh,
-          foregroundColor:
-              widget._task.status
-                  ? Colors.white
-                  : ThemeValues(context).colorScheme.onSurface,
+          foregroundColor: widget._task.status ? Colors.white : Colors.red,
           icon: Icons.delete_outline_rounded,
           label: 'Delete',
           onPressed: (_) => _showDeleteConfirmationDialog(context),
