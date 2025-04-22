@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
 import 'package:todolist/shared/components/my_alert_dialog.dart';
 import 'package:todolist/shared/components/my_text.dart';
+import 'package:todolist/views/main/widgets/main_navigation_bar.dart';
 import '../../shared/values/main_values.dart';
-import 'widgets/main_navigation_bar.dart';
 import '../settings/settings_view.dart';
 import '../task/task_view.dart';
 
