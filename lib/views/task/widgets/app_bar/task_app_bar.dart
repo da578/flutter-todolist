@@ -7,8 +7,8 @@ import 'package:todolist/shared/values/media_values.dart';
 import 'package:todolist/shared/values/screen.dart';
 import 'package:todolist/shared/values/task_values.dart';
 import 'package:todolist/shared/values/theme_values.dart';
-import 'package:todolist/views/task/widgets/task_menu.dart';
-import 'package:todolist/views/task/widgets/task_sort.dart';
+import 'package:todolist/views/task/widgets/app_bar/task_menu.dart';
+import 'package:todolist/views/task/widgets/app_bar/task_sort.dart';
 
 /// TaskAppBar is the custom app bar for the task screen.
 ///
@@ -91,14 +91,13 @@ class _TaskAppBarState extends State<TaskAppBar> {
 
   @override
   Widget build(BuildContext context) => MyAppBar(
-    title: _isSearching ? '' : 'Flutter To Do List',
+    title: _isSearching ? '' : 'ToDayLy',
     actions: [
       AnimatedBuilder(
         animation: widget._animationController,
         builder: (_, __) => _buildSearchBar(widget._animationController.value),
       ),
       TaskMenu(
-        animationController: widget._animationController,
         presenter: widget._presenter,
       ),
     ],
