@@ -11,7 +11,7 @@ import 'package:todolist/repositories/task_repository.dart';
 import 'package:todolist/shared/values/task_values.dart';
 import 'package:todolist/shared/values/screen.dart';
 import 'package:todolist/shared/values/theme_values.dart';
-import 'package:todolist/views/task/widgets/task_app_bar.dart';
+import 'package:todolist/views/task/widgets/app_bar/task_app_bar.dart';
 import 'package:todolist/views/task/widgets/task_item.dart';
 import '../../shared/components/my_text.dart';
 
