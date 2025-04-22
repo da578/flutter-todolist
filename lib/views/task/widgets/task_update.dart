@@ -36,12 +36,15 @@ class TaskUpdate extends StatefulWidget {
   State<TaskUpdate> createState() => _TaskUpdateState();
 }
 
-class _TaskUpdateState extends State<TaskUpdate> {
+class _TaskUpdateState extends State<TaskUpdate>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animationController;
+
   /// Controller for the task name input field.
-  late final TextEditingController controllerName;
+  late final TextEditingController _controllerName;
 
   /// Controller for the task description input field.
-  late final TextEditingController controllerDescription;
+  late final TextEditingController _controllerDescription;
 
   /// The selected reminder date and time.
   DateTime? reminder;
@@ -59,10 +62,16 @@ class _TaskUpdateState extends State<TaskUpdate> {
   void initState() {
     super.initState();
 
+    // initialize animation controllers
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Screen.duration,
+    );
+
     // Initialize controllers and pre-fill with initial task data.
     final task = widget._initialTask;
-    controllerName = TextEditingController(text: task.name);
-    controllerDescription = TextEditingController(text: task.description);
+    _controllerName = TextEditingController(text: task.name);
+    _controllerDescription = TextEditingController(text: task.description);
 
     // Initialize reminder and deadline values.
     if (task.reminder != null) {
@@ -79,8 +88,9 @@ class _TaskUpdateState extends State<TaskUpdate> {
 
   @override
   void dispose() {
-    controllerName.dispose();
-    controllerDescription.dispose();
+    _animationController.dispose();
+    _controllerName.dispose();
+    _controllerDescription.dispose();
     super.dispose();
   }
 
@@ -104,16 +114,25 @@ class _TaskUpdateState extends State<TaskUpdate> {
         itemBuilder:
             (_) => [
               PopupMenuItem(
-                onTap: () => widget._initialTask.status = true,
+                onTap:
+                    () => setState(
+                      () =>
+                          widget._initialTask.status =
+                              !widget._initialTask.status,
+                    ),
                 child: Row(
                   children: [
                     Icon(
-                      Icons.done_rounded,
+                      widget._initialTask.status
+                          ? Icons.close_rounded
+                          : Icons.done_rounded,
                       color: ThemeValues(context).colorScheme.onSurface,
                     ),
                     const SizedBox(width: 10),
                     MyText(
-                      'Mark as done',
+                      widget._initialTask.status
+                          ? 'Mark as unfinished'
+                          : 'Mark as finished',
                       color: ThemeValues(context).colorScheme.onSurface,
                     ),
                   ],
@@ -130,20 +149,7 @@ class _TaskUpdateState extends State<TaskUpdate> {
       padding: Screen.padding.all,
       child: Column(
         children: [
-          TextField(
-            controller: controllerName,
-            textCapitalization: TextCapitalization.sentences,
-            style: TextStyle(
-              color: ThemeValues(context).colorScheme.onSurface,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: 'Enter task name...',
-              fillColor: Colors.transparent,
-            ),
-          ),
+          _buildTaskName(),
           const SizedBox(height: 15),
           _buildReminderSelector(),
           _buildDivider(),
@@ -153,6 +159,41 @@ class _TaskUpdateState extends State<TaskUpdate> {
         ],
       ),
     ),
+  );
+
+  Widget _buildTaskName() => Row(
+    children: [
+      AnimatedContainer(
+        duration: Screen.duration,
+        curve: Screen.curve,
+        child:
+            widget._initialTask.status
+                ? Icon(
+                  Icons.done_rounded,
+                  color: ThemeValues(context).colorScheme.primary,
+                )
+                : Icon(
+                  Icons.close_rounded,
+                  color: ThemeValues(context).colorScheme.error,
+                ),
+      ),
+      Expanded(
+        child: TextField(
+          controller: _controllerName,
+          textCapitalization: TextCapitalization.sentences,
+          style: TextStyle(
+            color: ThemeValues(context).colorScheme.onSurface,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            hintText: 'Enter task name...',
+            fillColor: Colors.transparent,
+          ),
+        ),
+      ),
+    ],
   );
 
   Widget _buildFloatingActionButton() => FloatingActionButton(
@@ -273,7 +314,7 @@ class _TaskUpdateState extends State<TaskUpdate> {
         const SizedBox(width: 15),
         Expanded(
           child: TextField(
-            controller: controllerDescription,
+            controller: _controllerDescription,
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
               hintText: 'Enter task description (optional)',
@@ -353,8 +394,8 @@ class _TaskUpdateState extends State<TaskUpdate> {
     await widget._presenter.updateTask(
       Task(
         id: widget._initialTask.id,
-        name: controllerName.text,
-        description: controllerDescription.text,
+        name: _controllerName.text,
+        description: _controllerDescription.text,
         status: widget._initialTask.status,
         order: widget._initialTask.order,
         reminder: reminder,
