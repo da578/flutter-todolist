@@ -198,11 +198,13 @@ class _TaskViewState extends State<TaskView>
           Icon(
             Icons.do_disturb_alt_outlined,
             color: ThemeValues(context).colorScheme.onSurface,
+            size: 40,
           ),
           const SizedBox(height: 10),
           MyText(
             'No tasks available.',
             color: ThemeValues(context).colorScheme.onSurface,
+            size: 20,
           ),
         ],
       ),
@@ -218,11 +220,13 @@ class _TaskViewState extends State<TaskView>
           Icon(
             Icons.search_off_rounded,
             color: ThemeValues(context).colorScheme.onSurface,
+            size: 40,
           ),
           const SizedBox(height: 10),
           MyText(
             'No tasks found.',
             color: ThemeValues(context).colorScheme.onSurface,
+            size: 20,
           ),
         ],
       ),
