@@ -6,7 +6,6 @@ import 'package:todolist/shared/components/my_text.dart';
 import 'package:todolist/shared/values/screen.dart';
 import 'package:todolist/shared/values/theme_values.dart';
 import 'package:todolist/views/about/widgets/about_donation.dart';
-import 'package:todolist/views/about/widgets/about_license.dart';
 import 'package:todolist/views/about/widgets/about_message.dart';
 
 class AboutView extends StatelessWidget {
@@ -71,7 +70,6 @@ class AboutView extends StatelessWidget {
                 const SizedBox(height: 10),
                 const AboutDonation(),
                 const SizedBox(height: 10),
-                const AboutLicense(),
               ],
             ),
           ),
