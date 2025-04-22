@@ -78,7 +78,7 @@ class Task {
     };
   }
 
-  /// Creates a Task object from a JSON-compatible Map<String, dynamic> representation.
+  /// Creates a Task object from a JSON-compatible Map&lt;String, dynamic&gt; representation.
   ///
   /// Date properties such as `reminder`, `deadline`, `onCreated`, and `onUpdated`
   /// are parsed from ISO 8601 strings into `DateTime` objects.
