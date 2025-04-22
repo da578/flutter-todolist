@@ -97,9 +97,7 @@ class _TaskAppBarState extends State<TaskAppBar> {
         animation: widget._animationController,
         builder: (_, __) => _buildSearchBar(widget._animationController.value),
       ),
-      TaskMenu(
-        presenter: widget._presenter,
-      ),
+      TaskMenu(presenter: widget._presenter),
     ],
   );
 
@@ -146,6 +144,7 @@ class _TaskAppBarState extends State<TaskAppBar> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
+                    autofocus: true,
                     decoration: InputDecoration(
                       hintText: 'Search...',
                       border: InputBorder.none,
