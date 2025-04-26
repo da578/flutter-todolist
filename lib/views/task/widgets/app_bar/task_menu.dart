@@ -5,14 +5,12 @@ import 'package:todolist/shared/components/my_text.dart';
 import 'package:todolist/shared/values/screen.dart';
 import 'package:todolist/shared/values/task_values.dart';
 import 'package:todolist/shared/values/theme_values.dart';
-import 'package:todolist/views/task/widgets/task_create.dart';
 import 'package:todolist/views/task/widgets/task_export.dart';
 import 'package:todolist/views/task/widgets/task_import.dart';
 
 /// TaskMenu is a popup menu that provides options for creating, exporting, and importing tasks.
 ///
 /// This widget is displayed as an action button in the app bar and allows users to:
-/// - Create a new task.
 /// - Export tasks to a file.
 /// - Import tasks from a file.
 class TaskMenu extends StatefulWidget {
@@ -60,39 +58,7 @@ class _TaskMenuState extends State<TaskMenu>
       ),
       elevation: 1,
       itemBuilder:
-          (_) => [
-            _buildCreateMenuItem(context),
-            _buildExportMenuItem(context),
-            _buildImportMenuItem(context),
-          ],
-    );
-  }
-
-  /// Builds the "Create" menu item.
-  ///
-  /// When tapped, it shows a bottom sheet for creating a new task.
-  PopupMenuItem<void> _buildCreateMenuItem(BuildContext context) {
-    return PopupMenuItem(
-      onTap: () {
-        // Set isCreating to true before showing the bottom sheet
-        TaskValues(context).read.setIsCreating(true);
-
-        MyBottomSheet.show(
-          context: context,
-          animationController: _animationController,
-          builder: (_) => TaskCreate(presenter: widget._presenter),
-        ).whenComplete(() {
-          // Reset isCreating to false when the bottom sheet is closed
-          if (context.mounted) TaskValues(context).read.setIsCreating(false);
-        });
-      },
-      child: Row(
-        children: [
-          Icon(Icons.add, color: ThemeValues(context).colorScheme.onSurface),
-          const SizedBox(width: 10),
-          MyText('Create', color: ThemeValues(context).colorScheme.onSurface),
-        ],
-      ),
+          (_) => [_buildExportMenuItem(context), _buildImportMenuItem(context)],
     );
   }
 

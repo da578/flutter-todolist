@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:todolist/contracts/task_presenter_contract.dart';
 import 'package:todolist/shared/components/my_app_bar.dart';
+import 'package:todolist/shared/components/my_bottom_sheet.dart';
 import 'package:todolist/shared/values/media_values.dart';
 import 'package:todolist/shared/values/screen.dart';
 import 'package:todolist/shared/values/task_values.dart';
 import 'package:todolist/shared/values/theme_values.dart';
 import 'package:todolist/views/task/widgets/app_bar/task_menu.dart';
 import 'package:todolist/views/task/widgets/app_bar/task_sort.dart';
+import 'package:todolist/views/task/widgets/task_create.dart';
 
 /// TaskAppBar is the custom app bar for the task screen.
 ///
@@ -41,9 +43,12 @@ class TaskAppBar extends StatefulWidget implements PreferredSizeWidget {
   State<TaskAppBar> createState() => _TaskAppBarState();
 }
 
-class _TaskAppBarState extends State<TaskAppBar> {
+class _TaskAppBarState extends State<TaskAppBar>
+    with SingleTickerProviderStateMixin {
   /// The text controller used to manage the search input field.
   late final TextEditingController _controller;
+
+  late final AnimationController _animationController;
 
   /// A timer used for debouncing search queries.
   Timer? _debounceTimer;
@@ -56,8 +61,12 @@ class _TaskAppBarState extends State<TaskAppBar> {
     super.initState();
 
     // Initialize the text controller and add a listener for debouncing.
-    _controller = TextEditingController();
-    _controller.addListener(_onSearchTextChanged);
+    _controller = TextEditingController()..addListener(_onSearchTextChanged);
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Screen.duration,
+    );
   }
 
   @override
@@ -97,6 +106,23 @@ class _TaskAppBarState extends State<TaskAppBar> {
         animation: widget._animationController,
         builder: (_, __) => _buildSearchBar(widget._animationController.value),
       ),
+      IconButton(
+        onPressed: () {
+          // Set isCreating to true before showing the bottom sheet
+          TaskValues(context).read.setIsCreating(true);
+
+          MyBottomSheet.show(
+            context: context,
+            animationController: _animationController,
+            builder: (_) => TaskCreate(presenter: widget._presenter),
+          ).whenComplete(() {
+            // Reset isCreating to false when the bottom sheet is closed
+            if (context.mounted) TaskValues(context).read.setIsCreating(false);
+          });
+        },
+        icon: Icon(Icons.note_add_rounded),
+        color: ThemeValues(context).colorScheme.onSurface,
+      ),
       TaskMenu(presenter: widget._presenter),
     ],
   );
@@ -127,7 +153,7 @@ class _TaskAppBarState extends State<TaskAppBar> {
         Opacity(
           opacity: animationValue,
           child: Container(
-            width: (MediaValues(context).width * 80 / 100) * animationValue,
+            width: (MediaValues(context).width * 70 / 100) * animationValue,
             height: 50,
             padding: Screen.padding.horizontal,
             decoration: BoxDecoration(
@@ -144,7 +170,7 @@ class _TaskAppBarState extends State<TaskAppBar> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    autofocus: true,
+                    autofocus: _isSearching,
                     decoration: InputDecoration(
                       hintText: 'Search...',
                       border: InputBorder.none,
