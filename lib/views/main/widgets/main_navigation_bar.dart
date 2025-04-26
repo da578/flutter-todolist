@@ -5,6 +5,7 @@ import 'package:todolist/shared/values/main_values.dart';
 import 'package:todolist/shared/values/screen.dart';
 import 'package:todolist/shared/values/theme_values.dart';
 
+/// Main navigation bar widget that uses Rive animations for icons.
 class MainNavigationBar extends StatefulWidget {
   const MainNavigationBar({super.key});
 
@@ -13,12 +14,18 @@ class MainNavigationBar extends StatefulWidget {
 }
 
 class _MainNavigationBarState extends State<MainNavigationBar> {
+  /// List to hold the Rive icon inputs for animation control.
   final List<SMIBool> _riveIconInputs = [];
+
+  /// List to hold the state machine controllers for each icon.
   final List<StateMachineController?> _controllers = [];
 
   @override
   void dispose() {
-    _controllers.map((controller) => controller?.dispose());
+    // Dispose all controllers when the widget is removed from the tree.
+    for (var controller in _controllers) {
+      controller?.dispose();
+    }
     super.dispose();
   }
 
@@ -56,16 +63,22 @@ class _MainNavigationBarState extends State<MainNavigationBar> {
                         MainValues(context).watch.currentIndex == index
                             ? 1
                             : 0.5,
-                    child: RiveAnimation.asset(
-                      antialiasing: true,
-                      riveIcon.source,
-                      artboard: riveIcon.artboard,
-                      onInit: (artboard) {
-                        _riveOnInit(
-                          artboard,
-                          stateMachineName: riveIcon.stateMachineName,
-                        );
-                      },
+                    child: ColorFiltered(
+                      colorFilter: ColorFilter.mode(
+                        ThemeValues(context).colorScheme.onSurface,
+                        BlendMode.srcATop,
+                      ),
+                      child: RiveAnimation.asset(
+                        antialiasing: true,
+                        riveIcon.source,
+                        artboard: riveIcon.artboard,
+                        onInit: (artboard) {
+                          _riveOnInit(
+                            artboard,
+                            stateMachineName: riveIcon.stateMachineName,
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -77,17 +90,21 @@ class _MainNavigationBarState extends State<MainNavigationBar> {
     );
   }
 
+  /// Initializes the Rive animation with the given state machine name.
   void _riveOnInit(Artboard artboard, {required String stateMachineName}) {
     StateMachineController? controller = StateMachineController.fromArtboard(
       artboard,
       stateMachineName,
     );
 
-    artboard.addController(controller!);
-    _controllers.add(controller);
-    _riveIconInputs.add(controller.findInput<bool>('active') as SMIBool);
+    if (controller != null) {
+      artboard.addController(controller);
+      _controllers.add(controller);
+      _riveIconInputs.add(controller.findInput<bool>('active') as SMIBool);
+    }
   }
 
+  /// Animates the icon at the specified index.
   void _animateTheIcons(int index) {
     _riveIconInputs[index].change(true);
     Future.delayed(
@@ -96,9 +113,10 @@ class _MainNavigationBarState extends State<MainNavigationBar> {
     );
   }
 
+  /// Builds an animated bar that appears below the active icon.
   Widget _buildAnimatedBar(bool isActive) => AnimatedContainer(
     duration: Screen.duration,
-    margin: EdgeInsets.only(bottom: 2),
+    margin: const EdgeInsets.only(bottom: 2),
     height: 4,
     width: isActive ? 20 : 0,
     decoration: BoxDecoration(
