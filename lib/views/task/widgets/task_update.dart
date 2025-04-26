@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:todolist/contracts/task_presenter_contract.dart';
 import 'package:todolist/models/task.dart';
+import 'package:todolist/shared/components/my_alert_dialog.dart';
 import 'package:todolist/shared/components/my_app_bar.dart';
+import 'package:todolist/shared/components/my_filled_button.dart';
 import 'package:todolist/shared/components/my_sized_box.dart';
 import 'package:todolist/shared/components/my_text.dart';
 import 'package:todolist/shared/values/media_values.dart';
@@ -133,6 +137,65 @@ class _TaskUpdateState extends State<TaskUpdate>
                       widget._initialTask.status
                           ? 'Mark as unfinished'
                           : 'Mark as finished',
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                onTap: () {
+                  final task =
+                      widget._initialTask
+                        ..name = '${widget._initialTask.name} (Copy)'
+                        ..onCreated = DateTime.now();
+                  widget._presenter.createSingleTask(task);
+                  Navigator.pop(context);
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.file_copy_outlined,
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 10),
+                    MyText(
+                      'Duplicate',
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                onTap: () {
+                  SharePlus.instance.share(ShareParams(text: 'Hello, World!'));
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.share_rounded,
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 10),
+                    MyText(
+                      'Share',
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                onTap: () async {
+                  await _showDeleteConfirmationDialog(context);
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 10),
+                    MyText(
+                      'Delete',
                       color: ThemeValues(context).colorScheme.onSurface,
                     ),
                   ],
@@ -387,6 +450,63 @@ class _TaskUpdateState extends State<TaskUpdate>
             '${DateFormat.E().format(deadline!)}, ${DateFormat.Hm().format(deadline!)}';
       });
     }
+  }
+
+  /// Shows a confirmation dialog before deleting the task.
+  Future<void> _showDeleteConfirmationDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      builder:
+          (_) => MyAlertDialog(
+            title: 'Confirmation',
+            content: Column(
+              children: [
+                Lottie.asset('lib/assets/animations/delete.json', height: 125),
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      height: 1.5,
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                    children: [
+                      const TextSpan(text: 'Are you sure want to delete '),
+                      TextSpan(
+                        text: widget._initialTask.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const TextSpan(text: ' task?'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              MyFilledButton(
+                backgroundColor: WidgetStatePropertyAll(
+                  ThemeValues(context).colorScheme.error,
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: MyText(
+                  'No',
+                  color: ThemeValues(context).colorScheme.onError,
+                ),
+              ),
+              MyFilledButton(
+                backgroundColor: WidgetStatePropertyAll(
+                  ThemeValues(context).colorScheme.primary,
+                ),
+                onPressed: () async {
+                  await widget._presenter.deleteTask(widget._initialTask.id);
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: MyText(
+                  'Yes',
+                  color: ThemeValues(context).colorScheme.onPrimary,
+                ),
+              ),
+            ],
+          ),
+    );
   }
 
   /// Saves the updated task and navigates back to the previous screen.
