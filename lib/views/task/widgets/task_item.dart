@@ -205,15 +205,15 @@ class _TaskItemState extends State<TaskItem>
           foregroundColor: widget._task.status ? Colors.white : Colors.red,
           icon: Icons.delete_outline_rounded,
           label: 'Delete',
-          onPressed: (_) => _showDeleteConfirmationDialog(context),
+          onPressed: (_) async => await _showDeleteConfirmationDialog(context),
         ),
       ],
     );
   }
 
   /// Shows a confirmation dialog before deleting the task.
-  void _showDeleteConfirmationDialog(BuildContext context) {
-    showDialog(
+  Future<void> _showDeleteConfirmationDialog(BuildContext context) async {
+    await showDialog(
       context: context,
       builder:
           (_) => MyAlertDialog(
