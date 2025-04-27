@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart';
-import 'package:todolist/models/navigation_item_model.dart';
+import 'package:todolist/models/rive_model.dart';
 import 'package:todolist/shared/values/main_values.dart';
 import 'package:todolist/shared/values/screen.dart';
 import 'package:todolist/shared/values/theme_values.dart';
+
+/// Internal model for navigation items containing the title and Rive model.
+class _NavigationItemModel {
+  final String title;
+  final RiveModel rive;
+
+  _NavigationItemModel({required this.title, required this.rive});
+}
 
 /// Main navigation bar widget that uses Rive animations for icons.
 class MainNavigationBar extends StatefulWidget {
@@ -15,15 +23,15 @@ class MainNavigationBar extends StatefulWidget {
 
 class _MainNavigationBarState extends State<MainNavigationBar> {
   /// List to hold the Rive icon inputs for animation control.
-  final List<SMIBool> _riveIconInputs = [];
+  late final List<SMIBool> _riveIconInputs;
 
   /// List to hold the state machine controllers for each icon.
-  final List<StateMachineController?> _controllers = [];
+  late final List<StateMachineController?> _controllers;
 
   @override
   void dispose() {
     // Dispose all controllers when the widget is removed from the tree.
-    for (var controller in _controllers) {
+    for (final controller in _controllers) {
       controller?.dispose();
     }
     super.dispose();
@@ -31,6 +39,25 @@ class _MainNavigationBarState extends State<MainNavigationBar> {
 
   @override
   Widget build(BuildContext context) {
+    List<_NavigationItemModel> bottomNavigationItems = [
+      _NavigationItemModel(
+        title: 'Home',
+        rive: RiveModel(
+          source: 'lib/assets/animations/icons.riv',
+          artboard: 'HOME',
+          stateMachineName: 'HOME_interactivity',
+        ),
+      ),
+      _NavigationItemModel(
+        title: 'Settings',
+        rive: RiveModel(
+          source: 'lib/assets/animations/icons.riv',
+          artboard: 'SETTINGS',
+          stateMachineName: 'SETTINGS_Interactivity',
+        ),
+      ),
+    ];
+
     return Container(
       margin: const EdgeInsets.all(30),
       padding: const EdgeInsets.all(15),
