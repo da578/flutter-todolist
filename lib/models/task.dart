@@ -127,4 +127,31 @@ class Task {
   ///
   /// This method is useful for tracking when a task was last modified.
   void updateTimestamp() => onUpdated = DateTime.now();
+
+  /// Creates a new Task object with the specified fields updated.
+  ///
+  /// - [id]: The unique ID of the task.
+  /// - [name]: The name of the task.
+  /// - [description]: A description of the task.
+  /// - [status]: Completion status of the task.
+  /// - [order]: Display order of the task.
+  /// - [reminder]: Reminder time for the task.
+  /// - [deadline]: Deadline for the task.
+  Task copyWith({
+    int? id,
+    String? name,
+    String? description,
+    bool? status,
+    int? order,
+    DateTime? reminder,
+    DateTime? deadline,
+  }) => Task(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    description: description ?? this.description,
+    status: status ?? this.status,
+    order: order ?? this.order,
+    reminder: reminder ?? this.reminder,
+    deadline: deadline ?? this.deadline,
+  );
 }
