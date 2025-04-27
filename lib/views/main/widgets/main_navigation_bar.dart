@@ -29,6 +29,13 @@ class _MainNavigationBarState extends State<MainNavigationBar> {
   late final List<StateMachineController?> _controllers;
 
   @override
+  void initState() {
+    super.initState();
+    _riveIconInputs = [];
+    _controllers = [];
+  }
+
+  @override
   void dispose() {
     // Dispose all controllers when the widget is removed from the tree.
     for (final controller in _controllers) {
