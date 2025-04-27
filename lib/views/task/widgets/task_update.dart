@@ -50,6 +50,11 @@ class _TaskUpdateState extends State<TaskUpdate>
   /// Controller for the task description input field.
   late final TextEditingController _controllerDescription;
 
+  late Task _currentItem;
+
+  final List<Task> _undoStack = [];
+  final List<Task> _redoStack = [];
+
   /// The selected reminder date and time.
   DateTime? reminder;
 
@@ -66,6 +71,8 @@ class _TaskUpdateState extends State<TaskUpdate>
   void initState() {
     super.initState();
 
+    _currentItem = widget._initialTask;
+
     // initialize animation controllers
     _animationController = AnimationController(
       vsync: this,
@@ -73,7 +80,7 @@ class _TaskUpdateState extends State<TaskUpdate>
     );
 
     // Initialize controllers and pre-fill with initial task data.
-    final task = widget._initialTask;
+    final task = _currentItem;
     _controllerName = TextEditingController(text: task.name);
     _controllerDescription = TextEditingController(text: task.description);
 
@@ -110,6 +117,30 @@ class _TaskUpdateState extends State<TaskUpdate>
   MyAppBar _buildAppBar() => MyAppBar(
     title: 'Detail Task',
     actions: [
+      IconButton(
+        onPressed: () => _undoStack.isNotEmpty ? _undo() : null,
+        icon: Icon(
+          Icons.undo_rounded,
+          color:
+              _undoStack.isNotEmpty
+                  ? ThemeValues(context).colorScheme.onSurface
+                  : ThemeValues(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+      ),
+      IconButton(
+        onPressed: () => _redoStack.isNotEmpty ? _redo() : null,
+        icon: Icon(
+          Icons.redo_rounded,
+          color:
+              _redoStack.isNotEmpty
+                  ? ThemeValues(context).colorScheme.onSurface
+                  : ThemeValues(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+      ),
       PopupMenuButton(
         icon: Icon(Icons.more_vert_rounded),
         iconColor: ThemeValues(context).colorScheme.onSurface,
@@ -167,7 +198,17 @@ class _TaskUpdateState extends State<TaskUpdate>
               ),
               PopupMenuItem(
                 onTap: () {
-                  SharePlus.instance.share(ShareParams(text: 'Hello, World!'));
+                  final task = _currentItem;
+                  final String sharedText = '''
+${task.id}. Task ${task.name}, Created At ${DateFormat.E().format(task.onCreated!)}, ${DateFormat.Hm().format(task.onCreated!)}
+Description: ${widget._initialTask.description}
+Status: ${widget._initialTask.status ? 'Finished' : 'Unfinished'}
+Order: ${widget._initialTask.order}
+Reminder: ${widget._initialTask.reminder != null ? '${DateFormat.E().format(task.reminder!)}, ${DateFormat.Hm().format(task.reminder!)}' : 'No reminder set'}
+Deadline: ${widget._initialTask.deadline != null ? '${DateFormat.E().format(task.deadline!)}, ${DateFormat.Hm().format(task.deadline!)}' : 'No deadline set'}
+''';
+
+                  SharePlus.instance.share(ShareParams(text: sharedText));
                 },
                 child: Row(
                   children: [
@@ -244,11 +285,13 @@ class _TaskUpdateState extends State<TaskUpdate>
         child: TextField(
           controller: _controllerName,
           textCapitalization: TextCapitalization.sentences,
+          onChanged: (_) => _trackTaskChanged(),
           style: TextStyle(
             color: ThemeValues(context).colorScheme.onSurface,
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
+
           decoration: InputDecoration(
             border: InputBorder.none,
             hintText: 'Enter task name...',
@@ -385,6 +428,7 @@ class _TaskUpdateState extends State<TaskUpdate>
               fillColor: Colors.transparent,
             ),
             maxLines: null,
+            onChanged: (_) => _trackTaskChanged(),
           ),
         ),
       ],
@@ -419,6 +463,8 @@ class _TaskUpdateState extends State<TaskUpdate>
         formattedReminder =
             '${DateFormat.E().format(reminder!)}, ${DateFormat.Hm().format(reminder!)}';
       });
+
+      _trackTaskChanged();
     }
   }
 
@@ -450,6 +496,64 @@ class _TaskUpdateState extends State<TaskUpdate>
             '${DateFormat.E().format(deadline!)}, ${DateFormat.Hm().format(deadline!)}';
       });
     }
+
+    _trackTaskChanged();
+  }
+
+  void _trackTaskChanged() {
+    _undoStack.add(_currentItem);
+    _redoStack.clear();
+    setState(
+      () =>
+          _currentItem = _currentItem.copyWith(
+            name: _controllerName.text,
+            description: _controllerDescription.text,
+            reminder: reminder,
+            deadline: deadline,
+          ),
+    );
+  }
+
+  void _undo() {
+    if (_undoStack.isNotEmpty) {
+      _redoStack.add(_currentItem);
+      setState(() {
+        _currentItem = _undoStack.removeLast();
+        _controllerName.text = _currentItem.name;
+        _controllerDescription.text = _currentItem.description;
+        reminder = _currentItem.reminder;
+        formattedReminder =
+            _currentItem.reminder != null
+                ? '${DateFormat.E().format(_currentItem.reminder!)}, ${DateFormat.Hm().format(_currentItem.reminder!)}'
+                : null;
+        deadline = _currentItem.deadline;
+        formattedDeadline =
+            _currentItem.deadline != null
+                ? '${DateFormat.E().format(_currentItem.deadline!)}, ${DateFormat.Hm().format(_currentItem.deadline!)}'
+                : null;
+      });
+    }
+  }
+
+  void _redo() {
+    if (_redoStack.isNotEmpty) {
+      _undoStack.add(_currentItem);
+      setState(() {
+        _currentItem = _redoStack.removeLast();
+        _controllerName.text = _currentItem.name;
+        _controllerDescription.text = _currentItem.description;
+        reminder = _currentItem.reminder;
+        formattedReminder =
+            _currentItem.reminder != null
+                ? '${DateFormat.E().format(_currentItem.reminder!)}, ${DateFormat.Hm().format(_currentItem.reminder!)}'
+                : null;
+        deadline = _currentItem.deadline;
+        formattedDeadline =
+            _currentItem.deadline != null
+                ? '${DateFormat.E().format(_currentItem.deadline!)}, ${DateFormat.Hm().format(_currentItem.deadline!)}'
+                : null;
+      });
+    }
   }
 
   /// Shows a confirmation dialog before deleting the task.
@@ -461,7 +565,16 @@ class _TaskUpdateState extends State<TaskUpdate>
             title: 'Confirmation',
             content: Column(
               children: [
-                Lottie.asset('lib/assets/animations/delete.json', height: 125),
+                ColorFiltered(
+                  colorFilter: ColorFilter.mode(
+                    ThemeValues(context).colorScheme.error,
+                    BlendMode.srcATop,
+                  ),
+                  child: Lottie.asset(
+                    'lib/assets/animations/delete.json',
+                    height: 125,
+                  ),
+                ),
                 RichText(
                   text: TextSpan(
                     style: TextStyle(
