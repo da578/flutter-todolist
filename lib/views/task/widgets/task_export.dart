@@ -37,7 +37,13 @@ class _TaskExportState extends State<TaskExport> {
                 weight: FontWeight.bold,
               ),
               const SizedBox(height: 10),
-              Lottie.asset('lib/assets/animations/upload.json'),
+              ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  ThemeValues(context).colorScheme.primary,
+                  BlendMode.srcATop,
+                ),
+                child: Lottie.asset('lib/assets/animations/upload.json'),
+              ),
               const SizedBox(height: 10),
               SegmentedButton(
                 segments: [

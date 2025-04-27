@@ -37,7 +37,13 @@ class _TaskImportState extends State<TaskImport> {
                 weight: FontWeight.bold,
               ),
               const SizedBox(height: 10),
-              Lottie.asset('lib/assets/animations/download.json'),
+              ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  ThemeValues(context).colorScheme.primary,
+                  BlendMode.srcATop,
+                ),
+                child: Lottie.asset('lib/assets/animations/download.json'),
+              ),
               const SizedBox(height: 10),
               SegmentedButton(
                 segments: [

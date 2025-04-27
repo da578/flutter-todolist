@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
 import 'package:todolist/shared/components/my_alert_dialog.dart';
 import 'package:todolist/shared/components/my_text.dart';
+import 'package:todolist/shared/values/theme_values.dart';
 import 'package:todolist/views/main/widgets/main_navigation_bar.dart';
 import '../../shared/values/main_values.dart';
 import '../settings/settings_view.dart';
@@ -66,7 +67,16 @@ class _MainViewState extends State<MainView> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Lottie.asset('lib/assets/animations/close.json', height: 125),
+          ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              ThemeValues(context).colorScheme.error,
+              BlendMode.srcATop,
+            ),
+            child: Lottie.asset(
+              'lib/assets/animations/close.json',
+              height: 125,
+            ),
+          ),
           MyText(
             'Are you sure you want to quit this app?',
             overflow: TextOverflow.visible,

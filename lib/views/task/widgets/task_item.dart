@@ -220,7 +220,16 @@ class _TaskItemState extends State<TaskItem>
             title: 'Confirmation',
             content: Column(
               children: [
-                Lottie.asset('lib/assets/animations/delete.json', height: 125),
+                ColorFiltered(
+                  colorFilter: ColorFilter.mode(
+                    ThemeValues(context).colorScheme.error,
+                    BlendMode.srcATop,
+                  ),
+                  child: Lottie.asset(
+                    'lib/assets/animations/delete.json',
+                    height: 125,
+                  ),
+                ),
                 RichText(
                   text: TextSpan(
                     style: TextStyle(
