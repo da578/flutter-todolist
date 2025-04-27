@@ -6,7 +6,6 @@ import 'package:todolist/contracts/task_presenter_contract.dart';
 import 'package:todolist/models/task.dart';
 import 'package:todolist/shared/components/my_alert_dialog.dart';
 import 'package:todolist/shared/components/my_app_bar.dart';
-import 'package:todolist/shared/components/my_filled_button.dart';
 import 'package:todolist/shared/components/my_sized_box.dart';
 import 'package:todolist/shared/components/my_text.dart';
 import 'package:todolist/shared/values/media_values.dart';
@@ -558,67 +557,45 @@ Deadline: ${widget._initialTask.deadline != null ? '${DateFormat.E().format(task
 
   /// Shows a confirmation dialog before deleting the task.
   Future<void> _showDeleteConfirmationDialog(BuildContext context) async {
-    await showDialog(
+    await MyAlertDialog.show(
       context: context,
-      builder:
-          (_) => MyAlertDialog(
-            title: 'Confirmation',
-            content: Column(
+      title: 'Confirmation',
+      content: Column(
+        children: [
+          ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              ThemeValues(context).colorScheme.error,
+              BlendMode.srcATop,
+            ),
+            child: Lottie.asset(
+              'lib/assets/animations/delete.json',
+              height: 125,
+            ),
+          ),
+          RichText(
+            text: TextSpan(
+              style: TextStyle(
+                height: 1.5,
+                color: ThemeValues(context).colorScheme.onSurface,
+              ),
               children: [
-                ColorFiltered(
-                  colorFilter: ColorFilter.mode(
-                    ThemeValues(context).colorScheme.error,
-                    BlendMode.srcATop,
-                  ),
-                  child: Lottie.asset(
-                    'lib/assets/animations/delete.json',
-                    height: 125,
-                  ),
+                const TextSpan(text: 'Are you sure want to delete '),
+                TextSpan(
+                  text: widget._initialTask.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      height: 1.5,
-                      color: ThemeValues(context).colorScheme.onSurface,
-                    ),
-                    children: [
-                      const TextSpan(text: 'Are you sure want to delete '),
-                      TextSpan(
-                        text: widget._initialTask.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const TextSpan(text: ' task?'),
-                    ],
-                  ),
-                ),
+                const TextSpan(text: ' task?'),
               ],
             ),
-            actions: [
-              MyFilledButton(
-                backgroundColor: WidgetStatePropertyAll(
-                  ThemeValues(context).colorScheme.error,
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: MyText(
-                  'No',
-                  color: ThemeValues(context).colorScheme.onError,
-                ),
-              ),
-              MyFilledButton(
-                backgroundColor: WidgetStatePropertyAll(
-                  ThemeValues(context).colorScheme.primary,
-                ),
-                onPressed: () async {
-                  await widget._presenter.deleteTask(widget._initialTask.id);
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: MyText(
-                  'Yes',
-                  color: ThemeValues(context).colorScheme.onPrimary,
-                ),
-              ),
-            ],
           ),
+        ],
+      ),
+      isCancellable: true,
+      onPressed: () async {
+        await widget._presenter.deleteTask(widget._initialTask.id);
+        if (context.mounted) Navigator.pop(context);
+      },
+      onPressedCancellable: null,
     );
   }
 
