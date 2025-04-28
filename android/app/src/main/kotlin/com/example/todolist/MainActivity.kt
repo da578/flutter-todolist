@@ -1,4 +1,4 @@
-package com.dzul.todolist
+package com.dzul.todayly
 
 import io.flutter.embedding.android.FlutterActivity
 

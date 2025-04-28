@@ -1,291 +1,617 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:todolist/contracts/task_presenter_contract.dart';
 import 'package:todolist/models/task.dart';
+import 'package:todolist/shared/components/my_alert_dialog.dart';
 import 'package:todolist/shared/components/my_app_bar.dart';
+import 'package:todolist/shared/components/my_sized_box.dart';
 import 'package:todolist/shared/components/my_text.dart';
 import 'package:todolist/shared/values/media_values.dart';
 import 'package:todolist/shared/values/screen.dart';
 import 'package:todolist/shared/values/theme_values.dart';
 
+/// A widget for updating a task's details
+///
+/// This widget allow users to edit the name, description, reminder, and deadline
+/// of a task. It also provides options to mark the task as done or delete it
 class TaskUpdate extends StatefulWidget {
-  final Task initialTask;
-  final TaskPresenterContract presenter;
+  /// The initial task data to be updated
+  final Task _initialTask;
 
+  /// The presenter responsible for handling business logic related to tasks.
+  final TaskPresenterContract _presenter;
+
+  /// Constructor for [TaskUpdate]
+  ///
+  /// Parameters
+  /// - [initialTask]: The task to be updated.
+  /// - [presenter]: The task presenter for handling updates.
   const TaskUpdate({
     super.key,
-    required this.initialTask,
-    required this.presenter,
-  });
+    required Task initialTask,
+    required TaskPresenterContract presenter,
+  }) : _initialTask = initialTask,
+       _presenter = presenter;
 
   @override
   State<TaskUpdate> createState() => _TaskUpdateState();
 }
 
-class _TaskUpdateState extends State<TaskUpdate> {
-  late final TextEditingController controllerName;
-  late final TextEditingController controllerDescription;
+class _TaskUpdateState extends State<TaskUpdate>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animationController;
+
+  /// Controller for the task name input field.
+  late final TextEditingController _controllerName;
+
+  /// Controller for the task description input field.
+  late final TextEditingController _controllerDescription;
+
+  late Task _currentItem;
+
+  final List<Task> _undoStack = [];
+  final List<Task> _redoStack = [];
+
+  /// The selected reminder date and time.
   DateTime? reminder;
+
+  /// The formatted reminder date and time for display.
   String? formattedReminder;
+
+  /// The selected deadline date and time.
   DateTime? deadline;
+
+  /// The formatted deadline date and time for display.
   String? formattedDeadline;
 
   @override
   void initState() {
     super.initState();
-    controllerName = TextEditingController();
-    controllerDescription = TextEditingController();
 
-    final task = widget.initialTask;
-    controllerName.text = task.name;
-    controllerDescription.text = task.description;
+    _currentItem = widget._initialTask;
 
-    if (task.reminder == null) {
-      reminder = null;
-      formattedReminder = null;
-    } else {
+    // initialize animation controllers
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Screen.duration,
+    );
+
+    // Initialize controllers and pre-fill with initial task data.
+    final task = _currentItem;
+    _controllerName = TextEditingController(text: task.name);
+    _controllerDescription = TextEditingController(text: task.description);
+
+    // Initialize reminder and deadline values.
+    if (task.reminder != null) {
       reminder = task.reminder;
       formattedReminder =
           '${DateFormat.E().format(task.reminder!)}, ${DateFormat.Hm().format(task.reminder!)}';
     }
-
-    if (task.deadline == null) {
-      deadline = null;
-      formattedDeadline = null;
-    } else {
+    if (task.deadline != null) {
       deadline = task.deadline;
       formattedDeadline =
           '${DateFormat.E().format(task.deadline!)}, ${DateFormat.Hm().format(task.deadline!)}';
-    }
+    } else {}
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
+    _controllerName.dispose();
+    _controllerDescription.dispose();
     super.dispose();
-    controllerName.dispose();
-    controllerDescription.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: MyAppBar(title: 'Detail Task'),
-      body: SingleChildScrollView(
-        child: Container(
-          width: MediaValues(context).width,
-          padding: Screen.padding.all,
-          child: Column(
-            children: [
-              TextField(
-                controller: controllerName,
-                textCapitalization: TextCapitalization.sentences,
-                style: TextStyle(
-                  color: ThemeValues(context).colorScheme.onSurface,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  hintText: 'Enter task name...',
-                  fillColor: Colors.transparent,
-                ),
-              ),
-              const SizedBox(height: 15),
-              InkWell(
-                onTap: () async {
-                  final dateTime = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime(DateTime.now().year + 1000),
-                  );
+  Widget build(BuildContext context) => _buildScaffold();
 
-                  if (dateTime == null) return;
-                  if (!context.mounted) return;
+  Widget _buildScaffold() => Scaffold(
+    appBar: _buildAppBar(),
+    body: _buildBody(),
+    floatingActionButton: _buildFloatingActionButton(),
+  );
 
-                  final timeOfDay = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.now(),
-                  );
-
-                  if (timeOfDay == null) return;
-
-                  setState(
-                    () =>
-                        reminder = DateTime(
-                          dateTime.year,
-                          dateTime.month,
-                          dateTime.day,
-                          timeOfDay.hour,
-                          timeOfDay.minute,
-                        ),
-                  );
-
-                  String day = DateFormat.E().format(reminder!);
-                  String time = DateFormat.Hm().format(reminder!);
-                  formattedReminder = '$day, $time';
-                },
-                child: Ink(
-                  width: MediaValues(context).width,
-                  child: Row(
-                    children: [
-                      Icon(
-                        widget.initialTask.reminder == null
-                            ? Icons.notifications_off_outlined
-                            : Icons.notifications_active_outlined,
-                        color: ThemeValues(context).colorScheme.onSurface,
-                      ),
-                      const SizedBox(width: 15),
-                      MyText(
-                        'Reminder',
-                        color: ThemeValues(context).colorScheme.onSurface,
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: ThemeValues(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: MyText(
-                          formattedReminder ?? 'Empty',
-                          color: ThemeValues(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Opacity(
-                  opacity: 0.5,
-                  child: Divider(
-                    thickness: 1,
-                    color: ThemeValues(context).colorScheme.onSurface,
-                  ),
-                ),
-              ),
-              InkWell(
-                onTap: () async {
-                  final dateTime = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime(DateTime.now().year + 1000),
-                  );
-
-                  if (dateTime == null) return;
-                  if (!context.mounted) return;
-
-                  final timeOfDay = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.now(),
-                  );
-
-                  if (timeOfDay == null) return;
-
-                  setState(
-                    () =>
-                        deadline = DateTime(
-                          dateTime.year,
-                          dateTime.month,
-                          dateTime.day,
-                          timeOfDay.hour,
-                          timeOfDay.minute,
-                        ),
-                  );
-
-                  String day = DateFormat.E().format(deadline!);
-                  String time = DateFormat.Hm().format(deadline!);
-                  formattedDeadline = '$day, $time';
-                },
-                child: Ink(
-                  width: MediaValues(context).width,
-                  child: Row(
-                    children: [
-                      Icon(
-                        widget.initialTask.deadline == null
-                            ? Icons.timer_off_outlined
-                            : Icons.timer_outlined,
-                        color: ThemeValues(context).colorScheme.onSurface,
-                      ),
-                      const SizedBox(width: 15),
-                      MyText(
-                        'Deadline',
-                        color: ThemeValues(context).colorScheme.onSurface,
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: ThemeValues(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: MyText(
-                          formattedDeadline ?? 'Empty',
-                          color: ThemeValues(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Opacity(
-                  opacity: 0.5,
-                  child: Divider(
-                    thickness: 1,
-                    color: ThemeValues(context).colorScheme.onSurface,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: MediaValues(context).width,
+  MyAppBar _buildAppBar() => MyAppBar(
+    title: 'Detail Task',
+    actions: [
+      IconButton(
+        onPressed: () => _undoStack.isNotEmpty ? _undo() : null,
+        icon: Icon(
+          Icons.undo_rounded,
+          color:
+              _undoStack.isNotEmpty
+                  ? ThemeValues(context).colorScheme.onSurface
+                  : ThemeValues(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+      ),
+      IconButton(
+        onPressed: () => _redoStack.isNotEmpty ? _redo() : null,
+        icon: Icon(
+          Icons.redo_rounded,
+          color:
+              _redoStack.isNotEmpty
+                  ? ThemeValues(context).colorScheme.onSurface
+                  : ThemeValues(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+      ),
+      PopupMenuButton(
+        icon: Icon(Icons.more_vert_rounded),
+        iconColor: ThemeValues(context).colorScheme.onSurface,
+        elevation: 1,
+        borderRadius: BorderRadius.circular(20),
+        itemBuilder:
+            (_) => [
+              PopupMenuItem(
+                onTap:
+                    () => setState(
+                      () =>
+                          widget._initialTask.status =
+                              !widget._initialTask.status,
+                    ),
                 child: Row(
                   children: [
                     Icon(
-                      Icons.article,
+                      widget._initialTask.status
+                          ? Icons.close_rounded
+                          : Icons.done_rounded,
                       color: ThemeValues(context).colorScheme.onSurface,
                     ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: TextField(
-                        controller: controllerDescription,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: InputDecoration(
-                          hintText: 'Enter task description (optional)',
-                          border: InputBorder.none,
-                          fillColor: Colors.transparent,
-                        ),
-                        maxLines: null,
-                      ),
+                    const SizedBox(width: 10),
+                    MyText(
+                      widget._initialTask.status
+                          ? 'Mark as unfinished'
+                          : 'Mark as finished',
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                onTap: () {
+                  final task =
+                      widget._initialTask
+                        ..name = '${widget._initialTask.name} (Copy)'
+                        ..onCreated = DateTime.now();
+                  widget._presenter.createSingleTask(task);
+                  Navigator.pop(context);
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.file_copy_outlined,
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 10),
+                    MyText(
+                      'Duplicate',
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                onTap: () {
+                  final task = _currentItem;
+                  final String sharedText = '''
+${task.id}. Task ${task.name}, Created At ${DateFormat.E().format(task.onCreated!)}, ${DateFormat.Hm().format(task.onCreated!)}
+Description: ${widget._initialTask.description}
+Status: ${widget._initialTask.status ? 'Finished' : 'Unfinished'}
+Order: ${widget._initialTask.order}
+Reminder: ${widget._initialTask.reminder != null ? '${DateFormat.E().format(task.reminder!)}, ${DateFormat.Hm().format(task.reminder!)}' : 'No reminder set'}
+Deadline: ${widget._initialTask.deadline != null ? '${DateFormat.E().format(task.deadline!)}, ${DateFormat.Hm().format(task.deadline!)}' : 'No deadline set'}
+''';
+
+                  SharePlus.instance.share(ShareParams(text: sharedText));
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.share_rounded,
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 10),
+                    MyText(
+                      'Share',
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                onTap: () async {
+                  await _showDeleteConfirmationDialog(context);
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      color: ThemeValues(context).colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 10),
+                    MyText(
+                      'Delete',
+                      color: ThemeValues(context).colorScheme.onSurface,
                     ),
                   ],
                 ),
               ),
             ],
+      ),
+    ],
+  );
+
+  Widget _buildBody() => SingleChildScrollView(
+    child: Container(
+      width: MediaValues(context).width,
+      padding: Screen.padding.all,
+      child: Column(
+        children: [
+          _buildTaskName(),
+          const SizedBox(height: 15),
+          _buildReminderSelector(),
+          _buildDivider(),
+          _buildDeadlineSelector(),
+          _buildDivider(),
+          _buildTaskDescription(),
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildTaskName() => Row(
+    children: [
+      AnimatedContainer(
+        duration: Screen.duration,
+        curve: Screen.curve,
+        child:
+            widget._initialTask.status
+                ? Icon(
+                  Icons.done_rounded,
+                  color: ThemeValues(context).colorScheme.primary,
+                )
+                : Icon(
+                  Icons.close_rounded,
+                  color: ThemeValues(context).colorScheme.error,
+                ),
+      ),
+      Expanded(
+        child: TextField(
+          controller: _controllerName,
+          textCapitalization: TextCapitalization.sentences,
+          onChanged: (_) => _trackTaskChanged(),
+          style: TextStyle(
+            color: ThemeValues(context).colorScheme.onSurface,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            hintText: 'Enter task name...',
+            fillColor: Colors.transparent,
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        child: const Icon(Icons.save),
-        onPressed: () async {
-          await widget.presenter.updateTask(
-            Task(
-              id: widget.initialTask.id,
-              name: controllerName.text,
-              description: controllerDescription.text,
-              order: widget.initialTask.order,
-              reminder: reminder,
-              deadline: deadline,
-            ),
-          );
+    ],
+  );
 
-          if (context.mounted) Navigator.pop(context);
-        },
+  Widget _buildFloatingActionButton() => FloatingActionButton(
+    backgroundColor: Theme.of(context).colorScheme.primary,
+    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+    onPressed: _saveTask,
+    child: const Icon(Icons.save),
+  );
+
+  Widget _buildDivider() => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Opacity(
+      opacity: 0.5,
+      child: Divider(
+        thickness: 1,
+        color: ThemeValues(context).colorScheme.onSurface,
+      ),
+    ),
+  );
+
+  Widget _buildReminderSelector() => InkWell(
+    onTap: _selectReminder,
+    child: Ink(
+      width: MediaValues(context).width,
+      child: Row(
+        children: [
+          Icon(
+            widget._initialTask.reminder == null
+                ? Icons.notifications_off_outlined
+                : Icons.notifications_active_outlined,
+            color: ThemeValues(context).colorScheme.onSurface,
+          ),
+          const SizedBox(width: 15),
+          MyText('Reminder', color: ThemeValues(context).colorScheme.onSurface),
+          const Spacer(),
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: ThemeValues(context).colorScheme.primary,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: MyText(
+              formattedReminder ?? 'Empty',
+              color: ThemeValues(context).colorScheme.onPrimary,
+            ),
+          ),
+          reminder != null ? const SizedBox(width: 10) : MySizedBox.empty,
+          reminder != null
+              ? IconButton(
+                onPressed: () {
+                  setState(() {
+                    reminder = null;
+                    formattedReminder = null;
+                  });
+                },
+                icon: Icon(
+                  Icons.delete_outline_rounded,
+                  color: ThemeValues(context).colorScheme.onSurface,
+                ),
+              )
+              : MySizedBox.empty,
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildDeadlineSelector() => InkWell(
+    onTap: _selectDeadline,
+    child: Ink(
+      width: MediaValues(context).width,
+      child: Row(
+        children: [
+          Icon(
+            widget._initialTask.deadline == null
+                ? Icons.timer_off_outlined
+                : Icons.timer_outlined,
+            color: ThemeValues(context).colorScheme.onSurface,
+          ),
+          const SizedBox(width: 15),
+          MyText('Deadline', color: ThemeValues(context).colorScheme.onSurface),
+          const Spacer(),
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: ThemeValues(context).colorScheme.primary,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: MyText(
+              formattedDeadline ?? 'Empty',
+              color: ThemeValues(context).colorScheme.onPrimary,
+            ),
+          ),
+          deadline != null ? const SizedBox(width: 10) : MySizedBox.empty,
+          deadline != null
+              ? IconButton(
+                onPressed: () {
+                  setState(() {
+                    deadline = null;
+                    formattedDeadline = null;
+                  });
+                },
+                icon: Icon(
+                  Icons.delete_outline_rounded,
+                  color: ThemeValues(context).colorScheme.onSurface,
+                ),
+              )
+              : MySizedBox.empty,
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildTaskDescription() => SizedBox(
+    width: MediaValues(context).width,
+    child: Row(
+      children: [
+        Icon(Icons.article, color: ThemeValues(context).colorScheme.onSurface),
+        const SizedBox(width: 15),
+        Expanded(
+          child: TextField(
+            controller: _controllerDescription,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              hintText: 'Enter task description (optional)',
+              border: InputBorder.none,
+              fillColor: Colors.transparent,
+            ),
+            maxLines: null,
+            onChanged: (_) => _trackTaskChanged(),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  /// Opens a date and time picker to select a reminder.
+  Future<void> _selectReminder() async {
+    final dateTime = await showDatePicker(
+      context: context,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(DateTime.now().year + 1000),
+    );
+    if (dateTime == null || !mounted) return;
+
+    if (mounted) {
+      final timeOfDay = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (timeOfDay == null) return;
+
+      setState(() {
+        reminder = DateTime(
+          dateTime.year,
+          dateTime.month,
+          dateTime.day,
+          timeOfDay.hour,
+          timeOfDay.minute,
+        );
+        formattedReminder =
+            '${DateFormat.E().format(reminder!)}, ${DateFormat.Hm().format(reminder!)}';
+      });
+
+      _trackTaskChanged();
+    }
+  }
+
+  /// Opens a date and time picker to select a deadline.
+  Future<void> _selectDeadline() async {
+    final dateTime = await showDatePicker(
+      context: context,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(DateTime.now().year + 1000),
+    );
+    if (dateTime == null || !context.mounted) return;
+
+    if (mounted) {
+      final timeOfDay = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+      if (timeOfDay == null) return;
+
+      setState(() {
+        deadline = DateTime(
+          dateTime.year,
+          dateTime.month,
+          dateTime.day,
+          timeOfDay.hour,
+          timeOfDay.minute,
+        );
+        formattedDeadline =
+            '${DateFormat.E().format(deadline!)}, ${DateFormat.Hm().format(deadline!)}';
+      });
+    }
+
+    _trackTaskChanged();
+  }
+
+  void _trackTaskChanged() {
+    _undoStack.add(_currentItem);
+    _redoStack.clear();
+    setState(
+      () =>
+          _currentItem = _currentItem.copyWith(
+            name: _controllerName.text,
+            description: _controllerDescription.text,
+            reminder: reminder,
+            deadline: deadline,
+          ),
+    );
+  }
+
+  void _undo() {
+    if (_undoStack.isNotEmpty) {
+      _redoStack.add(_currentItem);
+      setState(() {
+        _currentItem = _undoStack.removeLast();
+        _controllerName.text = _currentItem.name;
+        _controllerDescription.text = _currentItem.description;
+        reminder = _currentItem.reminder;
+        formattedReminder =
+            _currentItem.reminder != null
+                ? '${DateFormat.E().format(_currentItem.reminder!)}, ${DateFormat.Hm().format(_currentItem.reminder!)}'
+                : null;
+        deadline = _currentItem.deadline;
+        formattedDeadline =
+            _currentItem.deadline != null
+                ? '${DateFormat.E().format(_currentItem.deadline!)}, ${DateFormat.Hm().format(_currentItem.deadline!)}'
+                : null;
+      });
+    }
+  }
+
+  void _redo() {
+    if (_redoStack.isNotEmpty) {
+      _undoStack.add(_currentItem);
+      setState(() {
+        _currentItem = _redoStack.removeLast();
+        _controllerName.text = _currentItem.name;
+        _controllerDescription.text = _currentItem.description;
+        reminder = _currentItem.reminder;
+        formattedReminder =
+            _currentItem.reminder != null
+                ? '${DateFormat.E().format(_currentItem.reminder!)}, ${DateFormat.Hm().format(_currentItem.reminder!)}'
+                : null;
+        deadline = _currentItem.deadline;
+        formattedDeadline =
+            _currentItem.deadline != null
+                ? '${DateFormat.E().format(_currentItem.deadline!)}, ${DateFormat.Hm().format(_currentItem.deadline!)}'
+                : null;
+      });
+    }
+  }
+
+  /// Shows a confirmation dialog before deleting the task.
+  Future<void> _showDeleteConfirmationDialog(BuildContext context) async {
+    await MyAlertDialog.show(
+      context: context,
+      title: 'Confirmation',
+      content: Column(
+        children: [
+          ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              ThemeValues(context).colorScheme.error,
+              BlendMode.srcATop,
+            ),
+            child: Lottie.asset(
+              'lib/assets/animations/delete.json',
+              height: 125,
+            ),
+          ),
+          RichText(
+            text: TextSpan(
+              style: TextStyle(
+                height: 1.5,
+                color: ThemeValues(context).colorScheme.onSurface,
+              ),
+              children: [
+                const TextSpan(text: 'Are you sure want to delete '),
+                TextSpan(
+                  text: widget._initialTask.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const TextSpan(text: ' task?'),
+              ],
+            ),
+          ),
+        ],
+      ),
+      isCancellable: true,
+      onPressed: () async {
+        await widget._presenter.deleteTask(widget._initialTask.id);
+        if (context.mounted) Navigator.pop(context);
+      },
+      onPressedCancellable: null,
+    );
+  }
+
+  /// Saves the updated task and navigates back to the previous screen.
+  Future<void> _saveTask() async {
+    await widget._presenter.updateTask(
+      Task(
+        id: widget._initialTask.id,
+        name: _controllerName.text,
+        description: _controllerDescription.text,
+        status: widget._initialTask.status,
+        order: widget._initialTask.order,
+        reminder: reminder,
+        deadline: deadline,
       ),
     );
+    if (mounted) Navigator.pop(context);
   }
 }

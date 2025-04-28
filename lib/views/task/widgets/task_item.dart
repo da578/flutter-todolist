@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:lottie/lottie.dart';
-import 'package:rive/rive.dart';
 import 'package:todolist/contracts/task_presenter_contract.dart';
 import 'package:todolist/models/task.dart';
 import 'package:todolist/shared/components/my_alert_dialog.dart';
@@ -37,7 +35,6 @@ class TaskItem extends StatefulWidget {
   /// Parameters:
   /// - [index]: The position of the task in the list.
   /// - [tasks]: The complete list of tasks.
-  /// - [animationController]: The controller for animations.
   /// - [task]: The task represented by this widget.
   /// - [presenter]: The task presenter for handling business logic.
   const TaskItem({
@@ -55,23 +52,26 @@ class TaskItem extends StatefulWidget {
   State<TaskItem> createState() => _TaskItemState();
 }
 
-class _TaskItemState extends State<TaskItem> {
-  Artboard? _artboard;
+class _TaskItemState extends State<TaskItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+  bool get _hasReminderOrDeadline =>
+      widget._task.reminder != null || widget._task.deadline != null;
 
   @override
   void initState() {
-    rootBundle.load('lib/assets/animations/confetti.riv').then((data) async {
-      try {
-        final file = RiveFile.import(data);
-        final artboard = file.mainArtboard;
-        final controller = StateMachineController.fromArtboard(
-          artboard,
-          'bruh',
-        );
-      } catch (e) {
-        print(e);
-      }
-    });
+    super.initState();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   @override
@@ -94,28 +94,47 @@ class _TaskItemState extends State<TaskItem> {
       },
       child: GestureDetector(
         onTap: () => _navigateToUpdateTaskScreen(context),
-        child: AnimatedContainer(
-          duration: Screen.duration,
-          margin: const EdgeInsets.only(top: 20),
-          decoration: BoxDecoration(
-            border:
-                !widget._task.status
-                    ? Border.all(
-                      color: ThemeValues(context).colorScheme.primary,
-                      width: 2,
-                    )
-                    : null,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: ClipRRect(
-            clipBehavior: Clip.antiAlias,
-            borderRadius: BorderRadius.circular(10),
-            child: Slidable(
-              startActionPane: _buildUpdateActionPane(context),
-              endActionPane: _buildDeleteActionPane(context),
-              child: _buildTaskContainer(context),
-            ),
-          ),
+        child: AnimatedBuilder(
+          animation: _pulseController,
+          builder: (_, _) => _buildTaskContent(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskContent() {
+    final Animation<Color?> colorAnimation = ColorTween(
+      begin: ThemeValues(context).colorScheme.primary,
+      end: Colors.transparent,
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Screen.curve));
+
+    final Animation<double> sizeAnimation = Tween<double>(
+      begin: 2,
+      end: 0,
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Screen.curve));
+
+    return Container(
+      margin: const EdgeInsets.only(top: 20),
+      decoration: BoxDecoration(
+        border:
+            !widget._task.status
+                ? Border.all(
+                  color:
+                      _hasReminderOrDeadline
+                          ? colorAnimation.value!
+                          : ThemeValues(context).colorScheme.primary,
+                  width: _hasReminderOrDeadline ? sizeAnimation.value : 2,
+                )
+                : null,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ClipRRect(
+        clipBehavior: Clip.antiAlias,
+        borderRadius: BorderRadius.circular(10),
+        child: Slidable(
+          startActionPane: _buildUpdateActionPane(context),
+          endActionPane: _buildDeleteActionPane(context),
+          child: _buildTaskContainer(context),
         ),
       ),
     );
@@ -186,22 +205,31 @@ class _TaskItemState extends State<TaskItem> {
           foregroundColor: widget._task.status ? Colors.white : Colors.red,
           icon: Icons.delete_outline_rounded,
           label: 'Delete',
-          onPressed: (_) => _showDeleteConfirmationDialog(context),
+          onPressed: (_) async => await _showDeleteConfirmationDialog(context),
         ),
       ],
     );
   }
 
   /// Shows a confirmation dialog before deleting the task.
-  void _showDeleteConfirmationDialog(BuildContext context) {
-    showDialog(
+  Future<void> _showDeleteConfirmationDialog(BuildContext context) async {
+    await showDialog(
       context: context,
       builder:
           (_) => MyAlertDialog(
             title: 'Confirmation',
             content: Column(
               children: [
-                Lottie.asset('lib/assets/animations/delete.json', height: 125),
+                ColorFiltered(
+                  colorFilter: ColorFilter.mode(
+                    ThemeValues(context).colorScheme.error,
+                    BlendMode.srcATop,
+                  ),
+                  child: Lottie.asset(
+                    'lib/assets/animations/delete.json',
+                    height: 125,
+                  ),
+                ),
                 RichText(
                   text: TextSpan(
                     style: TextStyle(
@@ -251,15 +279,31 @@ class _TaskItemState extends State<TaskItem> {
 
   /// Builds the container for displaying the task details.
   Widget _buildTaskContainer(BuildContext context) {
-    return Stack(
-      children: [
-        AnimatedContainer(
-          padding: Screen.padding.all,
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, _) {
+        final Animation<Color?> backgroundColorAnimation = ColorTween(
+          begin: ThemeValues(context).colorScheme.surfaceContainerHigh,
+          end: _determineBackgroundColor(),
+        ).animate(
+          CurvedAnimation(parent: _pulseController, curve: Screen.curve),
+        );
+
+        final Animation<Color?> foregroundColorAnimation = ColorTween(
+          begin: ThemeValues(context).colorScheme.onSurface,
+          end: _determineForegroundColor(),
+        ).animate(
+          CurvedAnimation(parent: _pulseController, curve: Screen.curve),
+        );
+
+        return AnimatedContainer(
           duration: Screen.duration,
-          curve: Screen.curve,
+          padding: Screen.padding.all,
           decoration: BoxDecoration(
             color:
-                widget._task.status
+                _hasReminderOrDeadline
+                    ? backgroundColorAnimation.value
+                    : widget._task.status
                     ? ThemeValues(context).colorScheme.primary
                     : ThemeValues(context).colorScheme.surfaceContainerHigh,
           ),
@@ -267,10 +311,19 @@ class _TaskItemState extends State<TaskItem> {
             children: [
               Checkbox(
                 shape: const CircleBorder(),
-                activeColor: ThemeValues(context).colorScheme.onPrimary,
-                checkColor: ThemeValues(context).colorScheme.primary,
+                activeColor:
+                    _hasReminderOrDeadline
+                        ? foregroundColorAnimation.value!
+                        : ThemeValues(context).colorScheme.onPrimary,
+                checkColor:
+                    _hasReminderOrDeadline
+                        ? backgroundColorAnimation.value!
+                        : ThemeValues(context).colorScheme.primary,
                 side: BorderSide(
-                  color: ThemeValues(context).colorScheme.onSurface,
+                  color:
+                      _hasReminderOrDeadline
+                          ? foregroundColorAnimation.value!
+                          : ThemeValues(context).colorScheme.onSurface,
                   width: 2,
                 ),
                 value: widget._task.status,
@@ -283,7 +336,9 @@ class _TaskItemState extends State<TaskItem> {
               MyText(
                 widget._task.name,
                 color:
-                    widget._task.status
+                    _hasReminderOrDeadline
+                        ? foregroundColorAnimation.value
+                        : widget._task.status
                         ? ThemeValues(context).colorScheme.onPrimary
                         : ThemeValues(context).colorScheme.onSurface,
                 weight: FontWeight.w500,
@@ -291,34 +346,23 @@ class _TaskItemState extends State<TaskItem> {
                 decorationColor: ThemeValues(context).colorScheme.onPrimary,
               ),
               const Spacer(),
+              const SizedBox(width: 10),
               ReorderableDragStartListener(
                 index: widget._index,
                 child: Icon(
                   Icons.menu,
                   color:
-                      widget._task.status
+                      _hasReminderOrDeadline
+                          ? foregroundColorAnimation.value
+                          : widget._task.status
                           ? ThemeValues(context).colorScheme.onPrimary
                           : ThemeValues(context).colorScheme.onSurface,
                 ),
               ),
             ],
           ),
-        ),
-        // widget._task.status
-        //     ? Positioned(
-        //       top: 0,
-        //       right: 0,
-        //       child: SizedBox(
-        //         width: 100, // Atur lebar sesuai kebutuhan
-        //         height: 100, // Atur tinggi sesuai kebutuhan
-        //         child: RiveAnimation.asset(
-        //           'lib/assets/animations/confetti.riv',
-        //           fit: BoxFit.cover,
-        //         ),
-        //       ),
-        //     )
-        //     : SizedBox.shrink(),
-      ],
+        );
+      },
     );
   }
 
@@ -341,7 +385,7 @@ class _TaskItemState extends State<TaskItem> {
                   Tween(
                     begin: const Offset(0, 1),
                     end: Offset.zero,
-                  ).chain(CurveTween(curve: Curves.easeInOut)),
+                  ).chain(CurveTween(curve: Screen.curve)),
                 ),
                 child: child,
               ),
@@ -351,5 +395,21 @@ class _TaskItemState extends State<TaskItem> {
     ).then((_) {
       if (context.mounted) TaskValues(context).read.setIsUpdating(false);
     });
+  }
+
+  Color _determineBackgroundColor() {
+    if (widget._task.deadline != null) return Colors.red;
+    if (widget._task.reminder != null) {
+      return ThemeValues(context).colorScheme.primary;
+    }
+    return ThemeValues(context).colorScheme.surfaceContainerHigh;
+  }
+
+  Color _determineForegroundColor() {
+    if (widget._task.deadline != null) return Colors.white;
+    if (widget._task.reminder != null) {
+      return ThemeValues(context).colorScheme.onPrimary;
+    }
+    return ThemeValues(context).colorScheme.onSurface;
   }
 }
