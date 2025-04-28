@@ -87,7 +87,6 @@ flutter_launcher_icons:
   adaptive_icon_foreground: "lib/assets/icons/foreground.png"
   adaptive_icon_monochrome: "lib/assets/icons/monochrome.png"
 
-
 # The following section is specific to Flutter packages.
 flutter:
 
